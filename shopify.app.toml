@@ -1,23 +1,34 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
-client_id = "f38307ff28448bc1858ad9f3c2d19baf"
-name = "bot-defender"
-handle = "bot-defender"
-application_url = "https://shopify.dev/apps/default-app-home"
+name = "Bot Defender"
+client_id = "YOUR_CLIENT_ID"
+application_url = "YOUR_APP_URL"
 embedded = true
 
 [build]
 include_config_on_deploy = true
 
 [webhooks]
-api_version = "2025-04"
+api_version = "2024-01"
+address = "https://your-app.com/webhooks"
+topics = ["app/uninstalled", "shop/update"]
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
-scopes = ""
+# Add required scopes
+scopes = [
+  "read_products",
+  "write_products",
+  "read_orders",
+  "write_orders",
+  "read_customers",
+  "write_customers",
+  "read_script_tags",
+  "write_script_tags"
+]
 
 [auth]
-redirect_urls = [ "https://shopify.dev/apps/default-app-home/api/auth" ]
+redirect_urls = [ "YOUR_APP_URL/auth/callback" ]
 
 [pos]
 embedded = false

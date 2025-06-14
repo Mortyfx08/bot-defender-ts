@@ -1,0 +1,61 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["mongoDb"]
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("MONGODB_URI")
+}
+
+model BlockedIP {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  ip        String
+  shop      String   // Shopify shop domain
+  reason    String
+  blockedAt DateTime @default(now())
+  expiresAt DateTime?
+  metadata  Json?    // Additional flexible data
+
+  @@unique([ip, shop]) // Composite unique constraint
+  @@index([shop])
+  @@index([ip])
+  @@map("blocked_ips")
+  @@id([ip, shop]) // Use compound ID
+
+  @@allow('create', true)
+  @@allow('read', true)
+  @@allow('update', true)
+  @@allow('delete', true)
+}
+
+model BotActivity {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  ip        String
+  shop      String   // Shopify shop domain
+  userAgent String
+  path      String
+  timestamp DateTime @default(now())
+  severity  String   // high, medium, low
+  metadata  Json?    // Additional flexible data
+
+  @@index([shop])
+  @@index([timestamp])
+  @@index([severity])
+  @@map("bot_activities")
+}
+
+model SecurityAlert {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  shop      String   // Shopify shop domain
+  message   String
+  type      String   // warning, error, info
+  timestamp DateTime @default(now())
+  resolved  Boolean  @default(false)
+  metadata  Json?    // Additional flexible data
+
+  @@index([shop])
+  @@index([timestamp])
+  @@index([resolved])
+  @@map("security_alerts")
+} 

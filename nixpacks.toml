@@ -1,0 +1,16 @@
+[phases.install]
+cmds = ["npm install --legacy-peer-deps"]
+
+[phases.build]
+cmds = [
+  "npm run build",
+  "cd web && npm install --legacy-peer-deps",
+  "cd web && npm run build",
+  "cd .. && mkdir -p dist/web && cp -r web/build dist/web/build"
+]
+
+[start]
+cmd = "node dist/server/index.js"
+
+[variables]
+NODE_ENV = "production" 

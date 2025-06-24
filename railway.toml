@@ -1,2 +1,6 @@
 [build]
-builder = "dockerfile" 
+builder = "dockerfile"
+dockerfile = "Dockerfile"
+
+[deploy]
+startCommand = "node dist/server/index.js" 

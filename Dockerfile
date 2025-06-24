@@ -12,7 +12,7 @@ COPY tsconfig.json ./
 RUN rm -rf package-lock.json node_modules
 
 # Install dependencies with legacy peer deps to handle TypeScript conflict
-RUN npm ci --legacy-peer-deps
+RUN npm install --legacy-peer-deps
 
 # Copy the rest of the application
 COPY . .
@@ -25,7 +25,7 @@ WORKDIR /app/web
 COPY web/package*.json ./
 # Remove any existing lock files and node_modules in web directory
 RUN rm -rf package-lock.json node_modules
-RUN npm ci --legacy-peer-deps
+RUN npm install --legacy-peer-deps
 COPY web/ ./
 RUN npm run build
 

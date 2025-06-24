@@ -18,6 +18,7 @@ import { botDetectionMiddleware } from './middleware/botDetection';
 import { BlocklistUpdater } from './services/blocklistUpdater';
 import { ThreatFeedService } from './services/threatFeedService';
 import apiRoutes from './routes/api';
+import path from 'path';
 
 const shopify = shopifyApi({
   apiKey: process.env.SHOPIFY_API_KEY!,
@@ -645,6 +646,15 @@ const apolloServer = new ApolloServer({
     };
   },
 });
+
+// Serve frontend static files in production
+if (process.env.NODE_ENV === 'production') {
+  const frontendBuildPath = path.join(__dirname, 'web', 'build');
+  app.use(express.static(frontendBuildPath));
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(frontendBuildPath, 'index.html'));
+  });
+}
 
 // Start Apollo Server and Express app
 async function startServer() {

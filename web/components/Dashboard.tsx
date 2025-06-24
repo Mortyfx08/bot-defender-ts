@@ -142,8 +142,15 @@ export default function Dashboard() {
     );
   }
 
+  // Extract store name from shop domain (e.g., mystore.myshopify.com => mystore)
+  const shopDomain = (data as any).shop || '';
+  const storeName = shopDomain ? shopDomain.split('.')[0] : '';
+
   return (
     <Page title="Bot Defender">
+      <Card>
+        <Text variant="headingLg" as="h1">Welcome{storeName ? `, ${storeName}` : ''}!</Text>
+      </Card>
       <Layout>
         <Layout.Section>
           <div className="dashboard-grid">

@@ -25,6 +25,7 @@ router.get('/stats', async (req: Request, res: Response) => {
       botStats,
       blockedIPs,
       recentAttacks,
+      shop: session.shop,
       timestamp: new Date()
     });
   } catch (error) {

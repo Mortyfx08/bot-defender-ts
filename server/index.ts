@@ -25,10 +25,14 @@ const shopify = shopifyApi({
   apiKey: process.env.SHOPIFY_API_KEY!,
   apiSecretKey: process.env.SHOPIFY_API_SECRET!,
   scopes: process.env.SCOPES?.split(',') || [],
-  hostName: process.env.HOST!.replace(/https?:\/\//, ''),
+  hostName: process.env.HOST ? process.env.HOST.replace(/https?:\/\//, '') : '',
   apiVersion: LATEST_API_VERSION,
   isEmbeddedApp: true,
 });
+
+if (!process.env.HOST) {
+  console.error('ERROR: HOST environment variable is not set.');
+}
 
 const app = express();
 

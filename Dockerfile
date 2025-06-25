@@ -31,6 +31,7 @@ RUN npm run build
 
 # Move back to root and copy frontend build to backend
 WORKDIR /app
+RUN mkdir -p dist/web/build
 RUN cp -r web/build dist/web/build
 
 # Expose port
@@ -40,4 +41,4 @@ EXPOSE 3000
 ENV NODE_ENV=production
 
 # Start the application
-CMD ["node", "dist/server/index.js"] 
+CMD ["node", "dist/server/index.js"]

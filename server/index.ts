@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import '@shopify/shopify-api/adapters/node';
 import express, { Request, Response, NextFunction } from 'express';
 import { shopifyApi, ApiVersion, LATEST_API_VERSION } from '@shopify/shopify-api';
@@ -664,81 +665,35 @@ async function startServer() {
     await initializeDatabase();
     console.log('Database initialized successfully');
 
-    // Initialize threat feed service
-    console.log('Initializing threat feed service...');
-    const threatFeedService = await ThreatFeedService.getInstance();
-    await threatFeedService.updateThreatFeeds(); // Ensure threat feeds are updated on startup
-    console.log('Threat feed service initialized');
-
-    // Initialize blocklist updater
-    console.log('Initializing blocklist updater...');
-    BlocklistUpdater.getInstance();
-    console.log('Blocklist updater initialized');
-
-    await apolloServer.start();
+        // Initialize threat feed service
+        console.log('Initializing threat feed service...');
+        const threatFeedService = await ThreatFeedService.getInstance();
+        await threatFeedService.updateThreatFeeds(); // Ensure threat feeds are updated on startup
     
-    // Apply Apollo middleware
-    app.use('/graphql', 
-      cors<cors.CorsRequest>(),
-      json(),
-      expressMiddleware(apolloServer, {
-        context: async ({ req }) => {
-          return { req };
-        },
-      })
-    );
-
-    // Apply bot stats router
-    app.use('/api', botStatsRouter);
-
-    // Apply dashboard router
-    app.use('/api/dashboard', dashboardRouter);
-
-    // Start the server
-    const PORT = process.env.PORT || 3000;
-    const server = app.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
-      console.log(`GraphQL endpoint: http://localhost:${PORT}/graphql`);
-      console.log(`API endpoint: http://localhost:${PORT}/api`);
-      console.log(`Dashboard endpoint: http://localhost:${PORT}/api/dashboard`);
-      console.log(`Root endpoint: http://localhost:${PORT}/`);
-      console.log(`Test endpoints:`);
-      console.log(`- Redis test: http://localhost:${PORT}/test/redis`);
-      console.log(`- MongoDB test: http://localhost:${PORT}/test/mongodb`);
-      console.log(`- Bot Activity test: http://localhost:${PORT}/test/bot-activity`);
-      console.log(`- Bot Defender test: http://localhost:${PORT}/test/bot-defender`);
-    });
-
-    // Handle server errors
-    server.on('error', (error: NodeJS.ErrnoException) => {
-      if (error.code === 'EADDRINUSE') {
-        console.error(`Port ${PORT} is already in use. Please try a different port or kill the process using this port.`);
-        process.exit(1);
-      } else {
-        console.error('Server error:', error);
+        // Start Apollo Server
+        await apolloServer.start();
+    
+        // Apply Apollo middleware
+        app.use(
+          '/graphql',
+          json(),
+          expressMiddleware(apolloServer, {
+            context: async ({ req, res }) => ({
+              req,
+              res,
+            }),
+          })
+        );
+    
+        // Start Express server
+        const PORT = process.env.PORT || 4000;
+        app.listen(PORT, () => {
+          console.log(`🚀 Server ready at http://localhost:${PORT}`);
+        });
+      } catch (error) {
+        console.error('Failed to start server:', error);
         process.exit(1);
       }
-    });
-
-    // Handle process termination
-    process.on('SIGTERM', () => {
-      console.log('SIGTERM received. Shutting down gracefully...');
-      server.close(() => {
-        console.log('Server closed');
-        process.exit(0);
-      });
-    });
-
-  } catch (error) {
-    console.error('Failed to start server:', error);
-    process.exit(1);
-  }
-}
-
-// Only start the server if this file is run directly
-if (require.main === module) {
-  startServer();
-}
-
-export { app };
-export default app;
+    }
+    
+    startServer();

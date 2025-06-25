@@ -9,8 +9,9 @@ async function testBotProtection() {
     // Test 1: Redis Connection
     console.log('1️⃣ Testing Redis Connection...');
     const testKey = 'test:connection';
-    await RedisService.blockIP('127.0.0.1', { reason: 'Test connection', ttl: 10 });
-    const isConnected = await RedisService.isBlocked('127.0.0.1');
+    const redis = await RedisService.getInstance();
+    await redis.blockIP('127.0.0.1', { reason: 'Test connection', duration: 10 });
+    const isConnected = await redis.isBlocked('127.0.0.1');
     console.log('✅ Redis Connection:', isConnected ? 'SUCCESS' : 'FAILED');
     console.log('---\n');
 
@@ -61,20 +62,20 @@ async function testBotProtection() {
       path: '/api/sensitive-data'
     };
 
-    await RedisService.logAttack(attackData.ip, attackData.userAgent, attackData.path);
+    await redis.logAttack(attackData.ip, attackData.userAgent, attackData.path);
     console.log('✅ Attack logged successfully');
     console.log('---\n');
 
     // Test 5: IP Blocking
     console.log('5️⃣ Testing IP Blocking...');
     const blockIP = '192.168.1.300';
-    await RedisService.blockIP(blockIP, { 
+    await redis.blockIP(blockIP, { 
       reason: 'Suspicious activity detected',
-      ttl: 300 // 5 minutes
+      duration: 300 // 5 minutes
     });
 
-    const isBlocked = await RedisService.isBlocked(blockIP);
-    const blockReason = await RedisService.getBlockReason(blockIP);
+    const isBlocked = await redis.isBlocked(blockIP);
+    const blockReason = await redis.getBlockReason(blockIP);
     
     console.log(`IP Blocked: ${isBlocked}`);
     console.log(`Block Reason: ${blockReason}`);
@@ -87,4 +88,4 @@ async function testBotProtection() {
 }
 
 // Run tests
-testBotProtection().catch(console.error); 
+testBotProtection().catch(console.error);

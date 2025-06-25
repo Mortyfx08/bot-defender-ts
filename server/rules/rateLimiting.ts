@@ -1,6 +1,3 @@
-import { useAppBridge } from "@shopify/app-bridge-react";
-import { getSessionToken } from "@shopify/app-bridge-utils";
-
 interface RateLimitRule {
   requests: number;
   interval: number; // milliseconds

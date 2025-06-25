@@ -113,6 +113,14 @@ export const StoreConfig: React.FC<StoreConfigProps> = ({ shop, onConfigUpdate }
     },
   ];
 
+  const timeZones = [
+    'UTC',
+    'Europe/Paris',
+    'America/New_York',
+    'Asia/Tokyo',
+    // ...add as needed
+  ];
+
   return (
     <>
       <TopBar
@@ -180,7 +188,7 @@ export const StoreConfig: React.FC<StoreConfigProps> = ({ shop, onConfigUpdate }
 
                   <Select
                     label="Timezone"
-                    options={Intl.supportedValuesOf('timeZone').map(tz => ({
+                    options={timeZones.map((tz: string) => ({
                       label: tz,
                       value: tz,
                     }))}
@@ -292,4 +300,4 @@ export const StoreConfig: React.FC<StoreConfigProps> = ({ shop, onConfigUpdate }
       </Modal>
     </>
   );
-}; 
+};

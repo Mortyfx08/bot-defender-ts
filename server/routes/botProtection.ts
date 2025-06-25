@@ -1,8 +1,8 @@
 import { Router, Request, Response, NextFunction } from 'express';
-import { authenticate } from '../middlewares/auth';
-import StoreSettings from '../../database/models/StoreSettings';
-import BlockedIP from '../../database/models/BlockedIP';
-import AttemptLog from '../../database/models/AttemptLog';
+import { authenticate } from '../middleware/auth';
+import { StoreSettings } from '../../database/models/StoreSettings';
+import { BlockedIP } from '../../database/models/BlockedIP';
+import { AttemptLog } from '../../database/models/AttemptLog';
 
 const router = Router();
 
@@ -158,4 +158,4 @@ router.delete('/bot-protection-blocked-ips/:ip', authenticate, async (req, res) 
   }
 });
 
-export default router; 
+export default router;

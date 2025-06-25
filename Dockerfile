@@ -37,9 +37,6 @@ RUN cp -r web/build dist/web/build
 # Expose port
 EXPOSE 3000
 
-# Copy environment variables
-COPY .env .env
-
 # Set environment to production
 ENV NODE_ENV=production
 

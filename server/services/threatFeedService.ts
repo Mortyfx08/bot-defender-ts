@@ -53,7 +53,11 @@ export class ThreatFeedService {
   private async fetchIPsFromSource(url: string): Promise<Set<string>> {
     try {
       console.log(`Fetching bot IPs from source: ${url}`);
-      const response = await axios.get(url, { timeout: 5000 }); // 5 second timeout
+      const response = await axios.get(url, {
+        timeout: 10000, // 10 second timeout for slow feeds
+        // Uncomment below to ignore SSL errors (not recommended for production)
+        // httpsAgent: new (require('https').Agent)({ rejectUnauthorized: false })
+      });
       const content = response.data;
       
       // Extract IPs using a more efficient regex
@@ -74,8 +78,16 @@ export class ThreatFeedService {
 
       console.log(`Source ${url}: Found ${validIPs.size} valid unique bot IPs`);
       return validIPs;
-    } catch (error) {
-      console.error(`Error fetching bot IPs from ${url}:`, error);
+    } catch (error: any) {
+      if (error.response) {
+        console.error(`Error fetching bot IPs from ${url}: HTTP ${error.response.status} - ${error.response.statusText}`);
+      } else if (error.code === 'ECONNABORTED') {
+        console.error(`Error fetching bot IPs from ${url}: Request timed out`);
+      } else if (error.code === 'ERR_BAD_REQUEST') {
+        console.error(`Error fetching bot IPs from ${url}: Bad request`);
+      } else {
+        console.error(`Error fetching bot IPs from ${url}:`, error.message || error);
+      }
       return new Set();
     }
   }
@@ -212,4 +224,4 @@ export class ThreatFeedService {
       this.updateInterval = null;
     }
   }
-} 
+}

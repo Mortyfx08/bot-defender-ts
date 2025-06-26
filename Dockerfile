@@ -7,6 +7,8 @@ WORKDIR /app
 # Copy package files first for better caching
 COPY package*.json ./
 COPY tsconfig.json ./
+COPY prisma ./prisma
+COPY .env ./
 
 # Remove any existing lock files and node_modules to ensure clean install
 RUN rm -rf package-lock.json node_modules

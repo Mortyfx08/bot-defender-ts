@@ -21,18 +21,18 @@ import { ThreatFeedService } from './services/threatFeedService';
 import apiRoutes from './routes/api';
 import path from 'path';
 
+if (!process.env.HOST) {
+  throw new Error('FATAL: HOST environment variable is not set. Please set HOST in your Railway/production environment.');
+}
+
 const shopify = shopifyApi({
   apiKey: process.env.SHOPIFY_API_KEY!,
   apiSecretKey: process.env.SHOPIFY_API_SECRET!,
   scopes: process.env.SCOPES?.split(',') || [],
-  hostName: process.env.HOST ? process.env.HOST.replace(/https?:\/\//, '') : '',
+  hostName: process.env.HOST.replace(/https?:\/\//, ''),
   apiVersion: LATEST_API_VERSION,
   isEmbeddedApp: true,
 });
-
-if (!process.env.HOST) {
-  console.error('ERROR: HOST environment variable is not set.');
-}
 
 const app = express();
 

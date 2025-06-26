@@ -21,12 +21,6 @@ model BlockedIP {
   @@index([shop])
   @@index([ip])
   @@map("blocked_ips")
-  @@id([ip, shop]) // Use compound ID
-
-  @@allow('create', true)
-  @@allow('read', true)
-  @@allow('update', true)
-  @@allow('delete', true)
 }
 
 model BotActivity {
@@ -58,4 +52,4 @@ model SecurityAlert {
   @@index([timestamp])
   @@index([resolved])
   @@map("security_alerts")
-} 
+}

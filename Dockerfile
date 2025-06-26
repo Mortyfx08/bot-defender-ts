@@ -14,6 +14,9 @@ RUN rm -rf package-lock.json node_modules
 # Install dependencies with legacy peer deps to handle TypeScript conflict
 RUN npm install --legacy-peer-deps
 
+# Generate Prisma client
+RUN npx prisma generate
+
 # Copy the rest of the application
 COPY . .
 

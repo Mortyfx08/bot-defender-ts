@@ -113,6 +113,9 @@ export class ThreatFeedService {
   }
 
   private async writeThreatFeedFile(data: ThreatFeedData): Promise<void> {
+    // Ensure the directory exists before writing
+    const dir = path.dirname(this.threatFeedPath);
+    await fs.mkdir(dir, { recursive: true });
     // Convert Set to array for JSON serialization
     const serializableData = {
       ...data,

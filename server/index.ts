@@ -603,6 +603,11 @@ app.get('/test/cleanup-redis', async (req: Request, res: Response) => {
   }
 });
 
+// Health check route for Railway/Shopify
+app.get('/health', (_req, res) => {
+  res.send('✅ Bot Defender server is running');
+});
+
 // Apply Shopify session middleware
 app.use('/api', verifyRequest);
 

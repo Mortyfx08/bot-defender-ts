@@ -3,7 +3,6 @@
     "version": "1.0.0",
     "private": true,
     "description": "Bot protection app for Shopify stores",
-    "main": "dist/backend/src/server.js",
     "scripts": {
         "start": "node dist/server/index.js",
         "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",

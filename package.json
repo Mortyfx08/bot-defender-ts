@@ -5,6 +5,8 @@
     "description": "Bot protection app for Shopify stores",
     "scripts": {
         "start": "node dist/server/index.js",
+        "start:simple": "ts-node server/simple.ts",
+        "start:basic": "node server/basic.js",
         "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
         "dev:backend": "nodemon --watch server --exec ts-node server/index.ts",
         "dev:frontend": "cd web && npm start",

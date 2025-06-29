@@ -137,29 +137,31 @@ app.get('/health', (_req, res) => {
     status: 'healthy',
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'development',
-    missingEnvVars: missingEnvVars.length > 0 ? missingEnvVars : null
+    port: process.env.PORT || 'not set'
   });
 });
 
 // Root route handler
 app.get('/', (req: Request, res: Response) => {
   res.json({
-    message: 'Welcome to Bot Defender API',
-    status: 'running',
-    environment: process.env.NODE_ENV || 'development',
-    endpoints: {
-      health: '/health',
-      graphql: '/graphql',
-      api: '/api',
-      botStats: '/api/bot-stats',
-      test: {
-        redis: '/test/redis',
-        mongodb: '/test/mongodb',
-        botActivity: '/test/bot-activity',
-        botDefender: '/test/bot-defender'
-      }
-    },
-    documentation: 'API documentation coming soon'
+    message: 'Bot Defender API is running',
+    status: 'ok',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Test route
+app.get('/test', (req: Request, res: Response) => {
+  res.json({
+    message: 'Test endpoint working',
+    env: {
+      NODE_ENV: process.env.NODE_ENV,
+      PORT: process.env.PORT,
+      HOST: process.env.HOST,
+      MONGODB_URI: process.env.MONGODB_URI ? 'Set' : 'Missing',
+      REDIS_URL: process.env.REDIS_URL ? 'Set' : 'Missing',
+      SHOPIFY_API_KEY: process.env.SHOPIFY_API_KEY ? 'Set' : 'Missing'
+    }
   });
 });
 
@@ -751,3 +753,12 @@ async function startServer() {
 }
 
 startServer();
+
+// Handle uncaught errors
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});

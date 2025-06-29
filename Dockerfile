@@ -8,7 +8,8 @@ WORKDIR /app
 COPY package*.json ./
 COPY tsconfig.json ./
 COPY prisma ./prisma
-COPY .env ./.env
+# COPY .env ./.env
+# For Railway/production: Do not copy .env, set all env vars in Railway dashboard
 
 # Remove any existing lock files and node_modules to ensure clean install
 RUN rm -rf package-lock.json node_modules

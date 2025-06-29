@@ -3,10 +3,25 @@ import { RedisService } from '../services/redis';
 
 async function initializeDatabase() {
   try {
+    // Check if required environment variables are set
+    if (!process.env.MONGODB_URI) {
+      throw new Error('MONGODB_URI environment variable is not set');
+    }
+    
+    if (!process.env.REDIS_URL) {
+      throw new Error('REDIS_URL environment variable is not set');
+    }
+
+    console.log('Connecting to MongoDB...');
     const mongoService = await MongoDBService.getInstance();
+    console.log('MongoDB connected successfully');
+
+    console.log('Connecting to Redis...');
     const redisService = await RedisService.getInstance();
+    console.log('Redis connected successfully');
 
     // Create indexes for bot_activities collection
+    console.log('Creating database indexes...');
     const botActivitiesCollection = mongoService.getCollection('bot_activities');
     await botActivitiesCollection.createIndexes([
       { key: { shop: 1 } },
@@ -32,9 +47,12 @@ async function initializeDatabase() {
       { key: { resolved: 1 } }
     ]);
 
-    console.log('Database initialized successfully');
+    console.log('✅ Database initialized successfully');
   } catch (error) {
-    console.error('Database initialization error:', error);
+    console.error('❌ Database initialization error:', error);
+    console.error('Please check your environment variables:');
+    console.error('- MONGODB_URI:', process.env.MONGODB_URI ? 'Set' : 'Missing');
+    console.error('- REDIS_URL:', process.env.REDIS_URL ? 'Set' : 'Missing');
     throw error;
   }
 }

@@ -130,6 +130,5 @@ dist
 .vscode
 node_modules
 dist
-web
 tests
 *.log

@@ -11,17 +11,18 @@ COPY prisma ./prisma
 # COPY .env ./.env
 # For Railway/production: Do not copy .env, set all env vars in Railway dashboard
 
-# Remove any existing lock files and node_modules to ensure clean install
-RUN rm -rf package-lock.json node_modules
-
-# Install dependencies with legacy peer deps to handle TypeScript conflict
+# Install backend dependencies
 RUN npm install --legacy-peer-deps
 
 # Generate Prisma client
 RUN npx prisma generate
 
-# Copy the rest of the application
-COPY . .
+# Copy the backend source code
+COPY server ./server
+COPY middleware ./middleware
+COPY database ./database
+COPY config ./config
+COPY types ./types
 
 # Build the backend
 RUN npm run build
@@ -38,7 +39,7 @@ RUN npm run build
 # Move back to root and copy frontend build to backend
 WORKDIR /app
 RUN mkdir -p dist/web/build
-RUN cp -r web/build dist/web/build
+RUN cp -r web/build/* dist/web/build/
 
 # Expose port
 EXPOSE 3000

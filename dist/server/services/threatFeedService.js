@@ -47,7 +47,11 @@ class ThreatFeedService {
     async fetchIPsFromSource(url) {
         try {
             console.log(`Fetching bot IPs from source: ${url}`);
-            const response = await axios_1.default.get(url, { timeout: 5000 }); // 5 second timeout
+            const response = await axios_1.default.get(url, {
+                timeout: 10000, // 10 second timeout for slow feeds
+                // Uncomment below to ignore SSL errors (not recommended for production)
+                // httpsAgent: new (require('https').Agent)({ rejectUnauthorized: false })
+            });
             const content = response.data;
             // Extract IPs using a more efficient regex
             const ipRegex = /\b(?:\d{1,3}\.){3}\d{1,3}\b/g;
@@ -67,7 +71,18 @@ class ThreatFeedService {
             return validIPs;
         }
         catch (error) {
-            console.error(`Error fetching bot IPs from ${url}:`, error);
+            if (error.response) {
+                console.error(`Error fetching bot IPs from ${url}: HTTP ${error.response.status} - ${error.response.statusText}`);
+            }
+            else if (error.code === 'ECONNABORTED') {
+                console.error(`Error fetching bot IPs from ${url}: Request timed out`);
+            }
+            else if (error.code === 'ERR_BAD_REQUEST') {
+                console.error(`Error fetching bot IPs from ${url}: Bad request`);
+            }
+            else {
+                console.error(`Error fetching bot IPs from ${url}:`, error.message || error);
+            }
             return new Set();
         }
     }
@@ -92,6 +107,9 @@ class ThreatFeedService {
         }
     }
     async writeThreatFeedFile(data) {
+        // Ensure the directory exists before writing
+        const dir = path_1.default.dirname(this.threatFeedPath);
+        await promises_1.default.mkdir(dir, { recursive: true });
         // Convert Set to array for JSON serialization
         const serializableData = {
             ...data,

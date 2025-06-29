@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.app = void 0;
+require("dotenv/config");
 require("@shopify/shopify-api/adapters/node");
 const express_1 = __importDefault(require("express"));
 const shopify_api_1 = require("@shopify/shopify-api");
@@ -13,8 +13,6 @@ const express4_1 = require("@apollo/server/express4");
 const body_parser_1 = require("body-parser");
 const verifyRequest_1 = require("./middleware/verifyRequest");
 const botProtectionMiddleware_1 = __importDefault(require("./middleware/botProtectionMiddleware"));
-const botStats_1 = __importDefault(require("./routes/botStats"));
-const dashboard_1 = __importDefault(require("./routes/dashboard"));
 const redis_1 = require("./services/redis");
 const schema_1 = require("./graphql/schema");
 const resolvers_1 = require("./graphql/resolvers");
@@ -24,6 +22,9 @@ const botDetection_1 = require("./middleware/botDetection");
 const blocklistUpdater_1 = require("./services/blocklistUpdater");
 const threatFeedService_1 = require("./services/threatFeedService");
 const path_1 = __importDefault(require("path"));
+if (!process.env.HOST) {
+    throw new Error('FATAL: HOST environment variable is not set. Please set HOST in your Railway/production environment.');
+}
 const shopify = (0, shopify_api_1.shopifyApi)({
     apiKey: process.env.SHOPIFY_API_KEY,
     apiSecretKey: process.env.SHOPIFY_API_SECRET,
@@ -33,7 +34,6 @@ const shopify = (0, shopify_api_1.shopifyApi)({
     isEmbeddedApp: true,
 });
 const app = (0, express_1.default)();
-exports.app = app;
 // Middleware
 app.use(express_1.default.json());
 // CORS configuration for development
@@ -564,6 +564,10 @@ app.get('/test/cleanup-redis', async (req, res) => {
         });
     }
 });
+// Health check route for Railway/Shopify
+app.get('/health', (_req, res) => {
+    res.send('✅ Bot Defender server is running');
+});
 // Apply Shopify session middleware
 app.use('/api', verifyRequest_1.verifyRequest);
 // Apply bot detection middleware for all routes
@@ -626,54 +630,19 @@ async function startServer() {
         console.log('Initializing threat feed service...');
         const threatFeedService = await threatFeedService_1.ThreatFeedService.getInstance();
         await threatFeedService.updateThreatFeeds(); // Ensure threat feeds are updated on startup
-        console.log('Threat feed service initialized');
-        // Initialize blocklist updater
-        console.log('Initializing blocklist updater...');
-        blocklistUpdater_1.BlocklistUpdater.getInstance();
-        console.log('Blocklist updater initialized');
+        // Start Apollo Server
         await apolloServer.start();
         // Apply Apollo middleware
-        app.use('/graphql', (0, cors_1.default)(), (0, body_parser_1.json)(), (0, express4_1.expressMiddleware)(apolloServer, {
-            context: async ({ req }) => {
-                return { req };
-            },
+        app.use('/graphql', (0, body_parser_1.json)(), (0, express4_1.expressMiddleware)(apolloServer, {
+            context: async ({ req, res }) => ({
+                req,
+                res,
+            }),
         }));
-        // Apply bot stats router
-        app.use('/api', botStats_1.default);
-        // Apply dashboard router
-        app.use('/api/dashboard', dashboard_1.default);
-        // Start the server
-        const PORT = process.env.PORT || 3000;
-        const server = app.listen(PORT, () => {
-            console.log(`Server running on port ${PORT}`);
-            console.log(`GraphQL endpoint: http://localhost:${PORT}/graphql`);
-            console.log(`API endpoint: http://localhost:${PORT}/api`);
-            console.log(`Dashboard endpoint: http://localhost:${PORT}/api/dashboard`);
-            console.log(`Root endpoint: http://localhost:${PORT}/`);
-            console.log(`Test endpoints:`);
-            console.log(`- Redis test: http://localhost:${PORT}/test/redis`);
-            console.log(`- MongoDB test: http://localhost:${PORT}/test/mongodb`);
-            console.log(`- Bot Activity test: http://localhost:${PORT}/test/bot-activity`);
-            console.log(`- Bot Defender test: http://localhost:${PORT}/test/bot-defender`);
-        });
-        // Handle server errors
-        server.on('error', (error) => {
-            if (error.code === 'EADDRINUSE') {
-                console.error(`Port ${PORT} is already in use. Please try a different port or kill the process using this port.`);
-                process.exit(1);
-            }
-            else {
-                console.error('Server error:', error);
-                process.exit(1);
-            }
-        });
-        // Handle process termination
-        process.on('SIGTERM', () => {
-            console.log('SIGTERM received. Shutting down gracefully...');
-            server.close(() => {
-                console.log('Server closed');
-                process.exit(0);
-            });
+        // Start Express server
+        const PORT = process.env.PORT || 4000;
+        app.listen(PORT, () => {
+            console.log(`🚀 Server ready at http://localhost:${PORT}`);
         });
     }
     catch (error) {
@@ -681,8 +650,4 @@ async function startServer() {
         process.exit(1);
     }
 }
-// Only start the server if this file is run directly
-if (require.main === module) {
-    startServer();
-}
-exports.default = app;
+startServer();

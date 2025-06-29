@@ -124,7 +124,7 @@ nixpacks.toml
 
 frontend/
 backend/
-web
+# web
 dist
 .git
 .vscode

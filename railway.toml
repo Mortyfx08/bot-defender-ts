@@ -3,4 +3,4 @@ builder = "dockerfile"
 dockerfile = "Dockerfile"
 
 [deploy]
-startCommand = "node dist/server/index.js" 
+startCommand = "npm run build && npm start" 

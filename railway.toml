@@ -1,6 +1,6 @@
-[build]
-builder = "dockerfile"
-dockerfile = "Dockerfile"
+# [build]
+# builder = "dockerfile"
+# dockerfile = "Dockerfile"
 
-[deploy]
-startCommand = "npm run build && npm start" 
+# [deploy]
+# startCommand = "npm run build && npm start"

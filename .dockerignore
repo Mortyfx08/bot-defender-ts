@@ -128,3 +128,8 @@ backend/
 dist
 .git
 .vscode
+node_modules
+dist
+web
+tests
+*.log

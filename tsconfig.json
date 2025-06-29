@@ -6,9 +6,8 @@
     "rootDir": ".",
     "strict": true,
     "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true
   },
   "include": ["server/**/*", "database/**/*"],
-  "exclude": ["node_modules", "web", "dist", "**/*.test.ts"]
+  "exclude": ["node_modules", "dist", "web", "tests", "**/*.test.ts"]
 }

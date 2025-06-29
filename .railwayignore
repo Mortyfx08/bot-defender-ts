@@ -1,2 +1,8 @@
 # Force Railway to use Dockerfile instead of Nixpacks
-nixpacks.toml 
+nixpacks.toml
+
+node_modules
+dist
+web
+tests
+*.log

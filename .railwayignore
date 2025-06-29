@@ -3,6 +3,6 @@ nixpacks.toml
 
 node_modules
 dist
-web
+# web  # Do NOT ignore the entire web folder, only web/node_modules and web/build
 tests
 *.log

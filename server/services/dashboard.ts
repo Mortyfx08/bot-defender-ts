@@ -54,7 +54,8 @@ export class DashboardService {
       const redisBlockedIPs = await this.redisService.getStoreBlockedIPs(shop);
 
       // Get threat feed specific data
-      const threatFeedIPs = await this.threatFeedService.getThreatFeedIPs();
+      const threatFeedIPCollection = this.mongoService.getCollection<{ ip: string }>('threat_feed_ips');
+      const totalThreatFeedIPs = await threatFeedIPCollection.countDocuments();
       const threatFeedStats = await this.mongoService.getCollection('threat_feed_updates')
         .find()
         .sort({ timestamp: -1 })
@@ -81,7 +82,7 @@ export class DashboardService {
         lowSeverityAlerts: securityAlerts.filter(alert => alert.severity === 'low').length,
         // Threat feed specific metrics
         threatFeedMetrics: {
-          totalThreatFeedIPs: threatFeedIPs.length,
+          totalThreatFeedIPs,
           threatFeedBlocks: threatFeedBlocks.length,
           lastUpdate: threatFeedStats[0]?.timestamp || null,
           threatFeedHighSeverity: securityAlerts.filter(alert => 
@@ -108,7 +109,7 @@ export class DashboardService {
             redis: redisBlockedIPs
           },
           threatFeedData: {
-            totalIPs: threatFeedIPs.length,
+            totalIPs: totalThreatFeedIPs,
             lastUpdate: threatFeedStats[0]?.timestamp || null,
             recentBlocks: threatFeedBlocks,
             updateStats: threatFeedStats[0] || null

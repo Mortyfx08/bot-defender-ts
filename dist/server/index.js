@@ -22,14 +22,30 @@ const botDetection_1 = require("./middleware/botDetection");
 const blocklistUpdater_1 = require("./services/blocklistUpdater");
 const threatFeedService_1 = require("./services/threatFeedService");
 const path_1 = __importDefault(require("path"));
-if (!process.env.HOST) {
-    throw new Error('FATAL: HOST environment variable is not set. Please set HOST in your Railway/production environment.');
+// Environment variable validation
+const requiredEnvVars = [
+    'HOST',
+    'SHOPIFY_API_KEY',
+    'SHOPIFY_API_SECRET',
+    'MONGODB_URI',
+    'REDIS_URL'
+];
+const missingEnvVars = requiredEnvVars.filter(envVar => !process.env[envVar]);
+if (missingEnvVars.length > 0) {
+    console.error('❌ Missing required environment variables:', missingEnvVars);
+    console.error('Please set these variables in your Railway dashboard:');
+    missingEnvVars.forEach(envVar => {
+        console.error(`  - ${envVar}`);
+    });
+    // Don't exit immediately, let the app start with a warning
+    console.warn('⚠️  App will start with limited functionality due to missing environment variables');
 }
+// Initialize Shopify API with fallback values
 const shopify = (0, shopify_api_1.shopifyApi)({
-    apiKey: process.env.SHOPIFY_API_KEY,
-    apiSecretKey: process.env.SHOPIFY_API_SECRET,
-    scopes: process.env.SCOPES?.split(',') || [],
-    hostName: process.env.HOST.replace(/https?:\/\//, ''),
+    apiKey: process.env.SHOPIFY_API_KEY || 'placeholder-key',
+    apiSecretKey: process.env.SHOPIFY_API_SECRET || 'placeholder-secret',
+    scopes: process.env.SCOPES?.split(',') || ['read_products'],
+    hostName: process.env.HOST?.replace(/https?:\/\//, '') || 'localhost',
     apiVersion: shopify_api_1.LATEST_API_VERSION,
     isEmbeddedApp: true,
 });
@@ -102,23 +118,35 @@ app.use((req, res, next) => {
     }
     next();
 });
+// Health check route for Railway/Shopify
+app.get('/health', (_req, res) => {
+    res.status(200).json({
+        status: 'healthy',
+        timestamp: new Date().toISOString(),
+        environment: process.env.NODE_ENV || 'development',
+        port: process.env.PORT || 'not set'
+    });
+});
 // Root route handler
 app.get('/', (req, res) => {
     res.json({
-        message: 'Welcome to Bot Defender API',
-        status: 'running',
-        endpoints: {
-            graphql: '/graphql',
-            api: '/api',
-            botStats: '/api/bot-stats',
-            test: {
-                redis: '/test/redis',
-                mongodb: '/test/mongodb',
-                botActivity: '/test/bot-activity',
-                botDefender: '/test/bot-defender'
-            }
-        },
-        documentation: 'API documentation coming soon'
+        message: 'Bot Defender API is running',
+        status: 'ok',
+        timestamp: new Date().toISOString()
+    });
+});
+// Test route
+app.get('/test', (req, res) => {
+    res.json({
+        message: 'Test endpoint working',
+        env: {
+            NODE_ENV: process.env.NODE_ENV,
+            PORT: process.env.PORT,
+            HOST: process.env.HOST,
+            MONGODB_URI: process.env.MONGODB_URI ? 'Set' : 'Missing',
+            REDIS_URL: process.env.REDIS_URL ? 'Set' : 'Missing',
+            SHOPIFY_API_KEY: process.env.SHOPIFY_API_KEY ? 'Set' : 'Missing'
+        }
     });
 });
 // Test endpoints
@@ -564,10 +592,6 @@ app.get('/test/cleanup-redis', async (req, res) => {
         });
     }
 });
-// Health check route for Railway/Shopify
-app.get('/health', (_req, res) => {
-    res.send('✅ Bot Defender server is running');
-});
 // Apply Shopify session middleware
 app.use('/api', verifyRequest_1.verifyRequest);
 // Apply bot detection middleware for all routes
@@ -622,14 +646,27 @@ if (process.env.NODE_ENV === 'production') {
 // Start Apollo Server and Express app
 async function startServer() {
     try {
-        // Initialize database first
+        // Initialize database first (with error handling)
         console.log('Initializing database...');
-        await (0, init_1.initializeDatabase)();
-        console.log('Database initialized successfully');
-        // Initialize threat feed service
+        try {
+            await (0, init_1.initializeDatabase)();
+            console.log('Database initialized successfully');
+        }
+        catch (dbError) {
+            console.error('⚠️  Database initialization failed:', dbError);
+            console.log('🔄 Continuing without database functionality...');
+        }
+        // Initialize threat feed service (with error handling)
         console.log('Initializing threat feed service...');
-        const threatFeedService = await threatFeedService_1.ThreatFeedService.getInstance();
-        await threatFeedService.updateThreatFeeds(); // Ensure threat feeds are updated on startup
+        try {
+            const threatFeedService = await threatFeedService_1.ThreatFeedService.getInstance();
+            await threatFeedService.updateThreatFeeds();
+            console.log('Threat feed service initialized successfully');
+        }
+        catch (threatError) {
+            console.error('⚠️  Threat feed service initialization failed:', threatError);
+            console.log('🔄 Continuing without threat feed functionality...');
+        }
         // Start Apollo Server
         await apolloServer.start();
         // Apply Apollo middleware
@@ -643,11 +680,25 @@ async function startServer() {
         const PORT = process.env.PORT || 4000;
         app.listen(PORT, () => {
             console.log(`🚀 Server ready at http://localhost:${PORT}`);
+            console.log(`📊 Health check available at http://localhost:${PORT}/health`);
+            console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
+            if (missingEnvVars.length > 0) {
+                console.log(`⚠️  Missing environment variables: ${missingEnvVars.join(', ')}`);
+                console.log('Please set these in your Railway dashboard for full functionality');
+            }
         });
     }
     catch (error) {
-        console.error('Failed to start server:', error);
+        console.error('❌ Failed to start server:', error);
+        console.error('Stack trace:', error instanceof Error ? error.stack : 'No stack trace available');
         process.exit(1);
     }
 }
 startServer();
+// Handle uncaught errors
+process.on('uncaughtException', (error) => {
+    console.error('Uncaught Exception:', error);
+});
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});

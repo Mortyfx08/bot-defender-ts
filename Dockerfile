@@ -6,12 +6,32 @@ WORKDIR /app
 
 # Copy package files first for better caching
 COPY package*.json ./
+COPY tsconfig.json ./
+COPY prisma ./prisma
 
-# Install dependencies
+# Install backend dependencies
 RUN npm install --legacy-peer-deps
 
-# Copy the basic server
-COPY server/basic.js ./server/
+# Generate Prisma client
+RUN npx prisma generate
+
+# Copy the rest of the application
+COPY . .
+
+# Build the backend (TypeScript -> dist/)
+RUN npm run build
+
+# Build the frontend
+WORKDIR /app/web
+COPY web/package*.json ./
+RUN npm install --legacy-peer-deps
+COPY web/ ./
+RUN npm run build
+
+# Move back to root and copy frontend build to backend
+WORKDIR /app
+RUN mkdir -p dist/web/build
+RUN cp -r web/build/* dist/web/build/
 
 # Expose port
 EXPOSE 3000
@@ -19,5 +39,5 @@ EXPOSE 3000
 # Set environment to production
 ENV NODE_ENV=production
 
-# Start with basic server for testing
-CMD ["npm", "run", "start:basic"]
+# Start the application
+CMD ["node", "dist/server/index.js"]

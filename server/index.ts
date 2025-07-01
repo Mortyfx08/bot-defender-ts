@@ -735,9 +735,9 @@ async function startServer() {
 
     // Start Express server
     const PORT = process.env.PORT || 4000;
-    app.listen(PORT, () => {
-      console.log(`🚀 Server ready at http://localhost:${PORT}`);
-      console.log(`📊 Health check available at http://localhost:${PORT}/health`);
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`🚀 Server ready at http://0.0.0.0:${PORT}`);
+      console.log(`📊 Health check available at http://0.0.0.0:${PORT}/health`);
       console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
       
       if (missingEnvVars.length > 0) {

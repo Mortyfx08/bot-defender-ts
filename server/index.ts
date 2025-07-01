@@ -133,6 +133,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 
 // Health check route for Railway/Shopify
 app.get('/health', (_req, res) => {
+  console.log('Health check endpoint hit');
   res.status(200).json({
     status: 'healthy',
     timestamp: new Date().toISOString(),

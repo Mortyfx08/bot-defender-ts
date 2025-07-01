@@ -1,18 +1,9 @@
 import axios from 'axios';
-import fs from 'fs/promises';
-import path from 'path';
-
-interface ThreatFeedData {
-  lastUpdated: string;
-  totalIPs: number;
-  sources: string[];
-  ips: Set<string>;
-}
+import { MongoDBService } from './mongodb';
 
 export class ThreatFeedService {
   private static instance: ThreatFeedService;
   private updateInterval: NodeJS.Timeout | null = null;
-  private readonly threatFeedPath = path.join(__dirname, '../data/threatFeedList.json');
   private readonly updateThreshold = 6 * 60 * 60 * 1000; // 6 hours in milliseconds
 
   private readonly threatFeedSources = [
@@ -53,18 +44,10 @@ export class ThreatFeedService {
   private async fetchIPsFromSource(url: string): Promise<Set<string>> {
     try {
       console.log(`Fetching bot IPs from source: ${url}`);
-      const response = await axios.get(url, {
-        timeout: 10000, // 10 second timeout for slow feeds
-        // Uncomment below to ignore SSL errors (not recommended for production)
-        // httpsAgent: new (require('https').Agent)({ rejectUnauthorized: false })
-      });
+      const response = await axios.get(url, { timeout: 10000 });
       const content = response.data;
-      
-      // Extract IPs using a more efficient regex
       const ipRegex = /\b(?:\d{1,3}\.){3}\d{1,3}\b/g;
       const matches = content.match(ipRegex) || [];
-      
-      // Validate IPs and add to Set for automatic deduplication
       const validIPs = new Set<string>();
       for (const ip of matches) {
         const parts = ip.split('.');
@@ -75,7 +58,6 @@ export class ThreatFeedService {
           validIPs.add(ip);
         }
       }
-
       console.log(`Source ${url}: Found ${validIPs.size} valid unique bot IPs`);
       return validIPs;
     } catch (error: any) {
@@ -92,71 +74,34 @@ export class ThreatFeedService {
     }
   }
 
-  private async readThreatFeedFile(): Promise<ThreatFeedData> {
-    try {
-      const data = await fs.readFile(this.threatFeedPath, 'utf-8');
-      const parsed = JSON.parse(data);
-      // Convert array back to Set
-      return {
-        ...parsed,
-        ips: new Set(parsed.ips)
-      };
-    } catch (error) {
-      // If file doesn't exist or is invalid, return empty structure
-      return {
-        lastUpdated: '',
-        totalIPs: 0,
-        sources: [],
-        ips: new Set()
-      };
-    }
-  }
-
-  private async writeThreatFeedFile(data: ThreatFeedData): Promise<void> {
-    // Ensure the directory exists before writing
-    const dir = path.dirname(this.threatFeedPath);
-    await fs.mkdir(dir, { recursive: true });
-    // Convert Set to array for JSON serialization
-    const serializableData = {
-      ...data,
-      ips: Array.from(data.ips)
-    };
-    await fs.writeFile(this.threatFeedPath, JSON.stringify(serializableData, null, 2));
-  }
-
   public async updateThreatFeeds(): Promise<void> {
     try {
-      // Check if we need to update
-      const currentData = await this.readThreatFeedFile();
-      const lastUpdate = new Date(currentData.lastUpdated).getTime();
+      // Use a timestamp collection to check last update
+      const mongoService = await MongoDBService.getInstance();
+      const metaCollection = mongoService.getCollection<{ _id: string, lastUpdated: string, totalIPs: number, sources: string[] }>('threat_feed_meta');
+      const ipCollection = mongoService.getCollection<{ ip: string }>('threat_feed_ips');
+      const meta = await metaCollection.findOne({ _id: 'meta' });
       const now = Date.now();
-
-      if (currentData.lastUpdated && (now - lastUpdate) < this.updateThreshold) {
+      if (meta && meta.lastUpdated && (now - new Date(meta.lastUpdated).getTime()) < this.updateThreshold) {
         console.log('Threat feed list is up to date, skipping update');
         return;
       }
-
       console.log('Starting threat feed update...');
       const startTime = Date.now();
-      let allIPs: Set<string> = new Set(currentData.ips); // Start with existing IPs
+      let allIPs: Set<string> = new Set();
       let failedSources = 0;
       let successfulSources = 0;
-
-      // Process sources in parallel with increased concurrency
-      const concurrencyLimit = 10; // Increased concurrency
+      const concurrencyLimit = 10;
       const chunks = [];
       for (let i = 0; i < this.threatFeedSources.length; i += concurrencyLimit) {
         chunks.push(this.threatFeedSources.slice(i, i + concurrencyLimit));
       }
-
       for (const chunk of chunks) {
         const results = await Promise.allSettled(
           chunk.map(source => this.fetchIPsFromSource(source))
         );
-
         results.forEach((result, index) => {
           if (result.status === 'fulfilled') {
-            // Merge new IPs with existing ones
             result.value.forEach(ip => allIPs.add(ip));
             successfulSources++;
           } else {
@@ -164,58 +109,49 @@ export class ThreatFeedService {
             failedSources++;
           }
         });
-
-        // Minimal delay between chunks
         if (chunks.indexOf(chunk) < chunks.length - 1) {
           await new Promise(resolve => setTimeout(resolve, 100));
         }
       }
-
       console.log('\nThreat Feed Update Summary:');
       console.log(`- Total sources processed: ${this.threatFeedSources.length}`);
       console.log(`- Successful sources: ${successfulSources}`);
       console.log(`- Failed sources: ${failedSources}`);
       console.log(`- Total unique IPs: ${allIPs.size}`);
-
-      // Update the JSON file
-      const threatFeedData: ThreatFeedData = {
-        lastUpdated: new Date().toISOString(),
-        totalIPs: allIPs.size,
-        sources: this.threatFeedSources,
-        ips: allIPs
-      };
-
-      await this.writeThreatFeedFile(threatFeedData);
-      console.log('✓ Successfully updated threat feed list');
-
+      // Remove old IPs
+      await ipCollection.deleteMany({});
+      // Insert new IPs
+      if (allIPs.size > 0) {
+        await ipCollection.insertMany(Array.from(allIPs).map(ip => ({ ip })));
+      }
+      await ipCollection.createIndex({ ip: 1 }, { unique: true });
+      // Update meta
+      await metaCollection.updateOne(
+        { _id: 'meta' },
+        { $set: { lastUpdated: new Date().toISOString(), totalIPs: allIPs.size, sources: this.threatFeedSources } },
+        { upsert: true }
+      );
+      console.log('✓ Successfully updated threat feed list in MongoDB');
       const endTime = Date.now();
       console.log(`\nUpdate completed in ${(endTime - startTime) / 1000} seconds`);
-
     } catch (error) {
       console.error('Error updating threat feeds:', error);
       throw error;
     }
   }
 
-  public async getThreatFeedIPs(): Promise<string[]> {
-    const data = await this.readThreatFeedFile();
-    return Array.from(data.ips);
-  }
-
   public async isIPInThreatFeed(ip: string): Promise<boolean> {
-    const data = await this.readThreatFeedFile();
-    return data.ips.has(ip);
+    const mongoService = await MongoDBService.getInstance();
+    const ipCollection = mongoService.getCollection<{ ip: string }>('threat_feed_ips');
+    const exists = await ipCollection.findOne({ ip });
+    return !!exists;
   }
 
   public startPeriodicUpdates(intervalHours: number = 6): void {
     if (this.updateInterval) {
       clearInterval(this.updateInterval);
     }
-
-    // Initial update
     this.updateThreatFeeds();
-
-    // Set up periodic updates
     this.updateInterval = setInterval(() => {
       this.updateThreatFeeds();
     }, intervalHours * 60 * 60 * 1000);

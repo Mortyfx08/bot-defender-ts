@@ -39,5 +39,5 @@ EXPOSE 3000
 # Set environment to production
 ENV NODE_ENV=production
 
-# Start the minimal server for Railway networking test
-CMD ["node", "server/minimal.js"]
+# Start the application using the compiled backend entry point
+CMD ["node", "dist/server/index.js"]

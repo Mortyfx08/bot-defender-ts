@@ -1,3 +1,4 @@
+console.log("🚀 Starting server...");
 import 'dotenv/config';
 import '@shopify/shopify-api/adapters/node';
 import express, { Request, Response, NextFunction } from 'express';

@@ -6,11 +6,11 @@
 # startCommand = "npm run build && npm start"
 
 [build]
-builder = "DOCKERFILE"
-dockerfilePath = "Dockerfile"
+builder = "dockerfile"
+dockerfile = "Dockerfile"
 
 [deploy]
-startCommand = "node dist/server/index.js"
+startCommand = "npm run start"
 healthcheckPath = "/health"
 healthcheckTimeout = 300
 restartPolicyType = "ON_FAILURE"

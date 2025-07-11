@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Request, Response } from 'express';
 import { shopifyAuthMiddleware } from '../middleware/shopifyAuth';
 import { RedisService } from '../services/redis';
 import { MongoDBService } from '../services/mongodb';
@@ -9,11 +9,11 @@ const router = express.Router();
 router.use(shopifyAuthMiddleware);
 
 // Dashboard data endpoint
-router.get('/dashboard', async (req, res) => {
+router.get('/dashboard', async (req: Request, res: Response) => {
   try {
-    const { shop } = req;
+    const shop = (req as any).shop;
     if (!shop) {
-      return res.status(400).json({ error: 'No shop provided' });
+      return res.status(400).json({ error: 'Missing required parameter: shop' });
     }
 
     const redisService = await RedisService.getInstance();
@@ -65,16 +65,16 @@ router.get('/dashboard', async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching dashboard data:', error);
-    res.status(500).json({ error: 'Failed to fetch dashboard data' });
+    res.status(500).json({ error: 'Failed to fetch dashboard data', details: error instanceof Error ? error.message : error });
   }
 });
 
 // Bot activities endpoint
-router.get('/bot-activities', async (req, res) => {
+router.get('/bot-activities', async (req: Request, res: Response) => {
   try {
-    const { shop } = req;
+    const shop = (req as any).shop;
     if (!shop) {
-      return res.status(400).json({ error: 'No shop provided' });
+      return res.status(400).json({ error: 'Missing required parameter: shop' });
     }
 
     const mongoService = await MongoDBService.getInstance();
@@ -87,16 +87,16 @@ router.get('/bot-activities', async (req, res) => {
     res.json(activities);
   } catch (error) {
     console.error('Error fetching bot activities:', error);
-    res.status(500).json({ error: 'Failed to fetch bot activities' });
+    res.status(500).json({ error: 'Failed to fetch bot activities', details: error instanceof Error ? error.message : error });
   }
 });
 
 // Activity log endpoint
-router.get('/activity-log', async (req, res) => {
+router.get('/activity-log', async (req: Request, res: Response) => {
   try {
-    const { shop } = req;
+    const shop = (req as any).shop;
     if (!shop) {
-      return res.status(400).json({ error: 'No shop provided' });
+      return res.status(400).json({ error: 'Missing required parameter: shop' });
     }
 
     const mongoService = await MongoDBService.getInstance();
@@ -109,18 +109,28 @@ router.get('/activity-log', async (req, res) => {
     res.json(activities);
   } catch (error) {
     console.error('Error fetching activity log:', error);
-    res.status(500).json({ error: 'Failed to fetch activity log' });
+    res.status(500).json({ error: 'Failed to fetch activity log', details: error instanceof Error ? error.message : error });
   }
 });
 
 // Block IP endpoint
-router.post('/block-ip', async (req, res) => {
+router.post('/block-ip', async (req: Request, res: Response) => {
   try {
-    const { shop } = req;
+    const shop = (req as any).shop;
     const { ip, reason, duration } = req.body;
 
-    if (!shop || !ip) {
-      return res.status(400).json({ error: 'Missing required parameters' });
+    // Manual validation
+    if (!shop) {
+      return res.status(400).json({ error: 'Missing required parameter: shop' });
+    }
+    if (!ip || typeof ip !== 'string' || !/^\d+\.\d+\.\d+\.\d+$/.test(ip)) {
+      return res.status(400).json({ error: 'Invalid or missing IP address', details: { ip } });
+    }
+    if (duration && (typeof duration !== 'number' || duration <= 0)) {
+      return res.status(400).json({ error: 'Invalid duration', details: { duration } });
+    }
+    if (reason && typeof reason !== 'string') {
+      return res.status(400).json({ error: 'Invalid reason', details: { reason } });
     }
 
     const redisService = await RedisService.getInstance();
@@ -136,18 +146,21 @@ router.post('/block-ip', async (req, res) => {
     }
   } catch (error) {
     console.error('Error blocking IP:', error);
-    res.status(500).json({ error: 'Failed to block IP' });
+    res.status(500).json({ error: 'Failed to block IP', details: error instanceof Error ? error.message : error });
   }
 });
 
 // Unblock IP endpoint
-router.post('/unblock-ip', async (req, res) => {
+router.post('/unblock-ip', async (req: Request, res: Response) => {
   try {
-    const { shop } = req;
+    const shop = (req as any).shop;
     const { ip } = req.body;
 
-    if (!shop || !ip) {
-      return res.status(400).json({ error: 'Missing required parameters' });
+    if (!shop) {
+      return res.status(400).json({ error: 'Missing required parameter: shop' });
+    }
+    if (!ip || typeof ip !== 'string' || !/^\d+\.\d+\.\d+\.\d+$/.test(ip)) {
+      return res.status(400).json({ error: 'Invalid or missing IP address', details: { ip } });
     }
 
     const redisService = await RedisService.getInstance();
@@ -157,18 +170,29 @@ router.post('/unblock-ip', async (req, res) => {
     res.json({ status: 'success', message: 'IP unblocked successfully' });
   } catch (error) {
     console.error('Error unblocking IP:', error);
-    res.status(500).json({ error: 'Failed to unblock IP' });
+    res.status(500).json({ error: 'Failed to unblock IP', details: error instanceof Error ? error.message : error });
   }
 });
 
 // Store configuration endpoint
-router.post('/store-config', async (req, res) => {
+router.post('/store-config', async (req: Request, res: Response) => {
   try {
-    const { shop } = req;
+    const shop = (req as any).shop;
     const { config } = req.body;
 
-    if (!shop || !config) {
-      return res.status(400).json({ error: 'Missing required parameters' });
+    // Manual validation
+    if (!shop) {
+      return res.status(400).json({ error: 'Missing required parameter: shop' });
+    }
+    if (!config || typeof config !== 'object') {
+      return res.status(400).json({ error: 'Missing or invalid config object', details: { config } });
+    }
+    // Example: check for required config fields
+    if (typeof config.blockThreshold !== 'number' || config.blockThreshold < 1 || config.blockThreshold > 100) {
+      return res.status(400).json({ error: 'Invalid blockThreshold', details: { blockThreshold: config.blockThreshold } });
+    }
+    if (config.customDomain && typeof config.customDomain === 'string' && !/^([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}$/.test(config.customDomain)) {
+      return res.status(400).json({ error: 'Invalid customDomain', details: { customDomain: config.customDomain } });
     }
 
     const mongoService = await MongoDBService.getInstance();
@@ -181,14 +205,22 @@ router.post('/store-config', async (req, res) => {
     res.json({ status: 'success', message: 'Store configuration updated' });
   } catch (error) {
     console.error('Error updating store configuration:', error);
-    res.status(500).json({ error: 'Failed to update store configuration' });
+    res.status(500).json({ error: 'Failed to update store configuration', details: error instanceof Error ? error.message : error });
   }
 });
 
 // Get store configuration endpoint
-router.get('/store-config', async (req, res) => {
+router.get('/store-config', async (req: Request, res: Response) => {
   try {
-    const { shop } = req;
+    console.log('DEBUG /api/store-config', { reqShop: (req as any).shop, queryShop: req.query.shop });
+    let shop = (req as any).shop;
+    if (!shop && req.query.shop) {
+      if (typeof req.query.shop === 'string') {
+        shop = req.query.shop as string;
+      } else if (Array.isArray(req.query.shop)) {
+        shop = req.query.shop[0] as string;
+      }
+    }
     if (!shop) {
       return res.status(400).json({ error: 'No shop provided' });
     }
@@ -209,6 +241,27 @@ router.get('/store-config', async (req, res) => {
   } catch (error) {
     console.error('Error fetching store configuration:', error);
     res.status(500).json({ error: 'Failed to fetch store configuration' });
+  }
+});
+
+// Get blocked IPs endpoint
+router.get('/blocked-ips', async (req: Request, res: Response) => {
+  try {
+    const shop = (req as any).shop;
+    if (!shop) {
+      return res.status(400).json({ error: 'No shop provided' });
+    }
+
+    const redisService = await RedisService.getInstance();
+    const blockedIPs = await redisService.getStoreBlockedIPs(shop);
+
+    res.json({
+      status: 'success',
+      data: blockedIPs
+    });
+  } catch (error) {
+    console.error('Error fetching blocked IPs:', error);
+    res.status(500).json({ error: 'Failed to fetch blocked IPs' });
   }
 });
 

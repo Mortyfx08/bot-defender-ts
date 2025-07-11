@@ -13,7 +13,7 @@ router.use(shopifyAuth_1.shopifyAuthMiddleware);
 // Dashboard data endpoint
 router.get('/dashboard', async (req, res) => {
     try {
-        const { shop } = req;
+        const shop = req.shop;
         if (!shop) {
             return res.status(400).json({ error: 'No shop provided' });
         }
@@ -70,7 +70,7 @@ router.get('/dashboard', async (req, res) => {
 // Bot activities endpoint
 router.get('/bot-activities', async (req, res) => {
     try {
-        const { shop } = req;
+        const shop = req.shop;
         if (!shop) {
             return res.status(400).json({ error: 'No shop provided' });
         }
@@ -90,7 +90,7 @@ router.get('/bot-activities', async (req, res) => {
 // Activity log endpoint
 router.get('/activity-log', async (req, res) => {
     try {
-        const { shop } = req;
+        const shop = req.shop;
         if (!shop) {
             return res.status(400).json({ error: 'No shop provided' });
         }
@@ -110,7 +110,7 @@ router.get('/activity-log', async (req, res) => {
 // Block IP endpoint
 router.post('/block-ip', async (req, res) => {
     try {
-        const { shop } = req;
+        const shop = req.shop;
         const { ip, reason, duration } = req.body;
         if (!shop || !ip) {
             return res.status(400).json({ error: 'Missing required parameters' });
@@ -135,7 +135,7 @@ router.post('/block-ip', async (req, res) => {
 // Unblock IP endpoint
 router.post('/unblock-ip', async (req, res) => {
     try {
-        const { shop } = req;
+        const shop = req.shop;
         const { ip } = req.body;
         if (!shop || !ip) {
             return res.status(400).json({ error: 'Missing required parameters' });
@@ -153,7 +153,7 @@ router.post('/unblock-ip', async (req, res) => {
 // Store configuration endpoint
 router.post('/store-config', async (req, res) => {
     try {
-        const { shop } = req;
+        const shop = req.shop;
         const { config } = req.body;
         if (!shop || !config) {
             return res.status(400).json({ error: 'Missing required parameters' });
@@ -170,7 +170,16 @@ router.post('/store-config', async (req, res) => {
 // Get store configuration endpoint
 router.get('/store-config', async (req, res) => {
     try {
-        const { shop } = req;
+        console.log('DEBUG /api/store-config', { reqShop: req.shop, queryShop: req.query.shop });
+        let shop = req.shop;
+        if (!shop && req.query.shop) {
+            if (typeof req.query.shop === 'string') {
+                shop = req.query.shop;
+            }
+            else if (Array.isArray(req.query.shop)) {
+                shop = req.query.shop[0];
+            }
+        }
         if (!shop) {
             return res.status(400).json({ error: 'No shop provided' });
         }
@@ -190,6 +199,25 @@ router.get('/store-config', async (req, res) => {
     catch (error) {
         console.error('Error fetching store configuration:', error);
         res.status(500).json({ error: 'Failed to fetch store configuration' });
+    }
+});
+// Get blocked IPs endpoint
+router.get('/blocked-ips', async (req, res) => {
+    try {
+        const shop = req.shop;
+        if (!shop) {
+            return res.status(400).json({ error: 'No shop provided' });
+        }
+        const redisService = await redis_1.RedisService.getInstance();
+        const blockedIPs = await redisService.getStoreBlockedIPs(shop);
+        res.json({
+            status: 'success',
+            data: blockedIPs
+        });
+    }
+    catch (error) {
+        console.error('Error fetching blocked IPs:', error);
+        res.status(500).json({ error: 'Failed to fetch blocked IPs' });
     }
 });
 exports.default = router;

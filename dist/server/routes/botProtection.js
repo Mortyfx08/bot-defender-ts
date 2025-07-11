@@ -9,7 +9,7 @@ const router = (0, express_1.Router)();
 // Get store settings
 router.get('/settings', auth_1.authenticate, async (req, res, next) => {
     try {
-        const storeId = req.session?.shop;
+        const storeId = req.shop;
         if (!storeId) {
             res.status(401).json({ error: 'Unauthorized' });
             return;
@@ -24,7 +24,7 @@ router.get('/settings', auth_1.authenticate, async (req, res, next) => {
 // Update store settings
 router.put('/settings', auth_1.authenticate, async (req, res, next) => {
     try {
-        const storeId = req.session?.shop;
+        const storeId = req.shop;
         if (!storeId) {
             res.status(401).json({ error: 'Unauthorized' });
             return;
@@ -39,7 +39,7 @@ router.put('/settings', auth_1.authenticate, async (req, res, next) => {
 // Get blocked IPs
 router.get('/blocked-ips', auth_1.authenticate, async (req, res, next) => {
     try {
-        const storeId = req.session?.shop;
+        const storeId = req.shop;
         if (!storeId) {
             res.status(401).json({ error: 'Unauthorized' });
             return;
@@ -54,7 +54,7 @@ router.get('/blocked-ips', auth_1.authenticate, async (req, res, next) => {
 // Unblock IP
 router.delete('/blocked-ips/:ip', auth_1.authenticate, async (req, res, next) => {
     try {
-        const storeId = req.session?.shop;
+        const storeId = req.shop;
         if (!storeId) {
             res.status(401).json({ error: 'Unauthorized' });
             return;
@@ -69,7 +69,7 @@ router.delete('/blocked-ips/:ip', auth_1.authenticate, async (req, res, next) =>
 // Get attempt logs
 router.get('/logs', auth_1.authenticate, async (req, res, next) => {
     try {
-        const storeId = req.session?.shop;
+        const storeId = req.shop;
         if (!storeId) {
             res.status(401).json({ error: 'Unauthorized' });
             return;

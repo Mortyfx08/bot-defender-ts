@@ -24,11 +24,10 @@ redisClient.on('error', (err) => {
 redisClient.on('connect', async () => {
   console.log('Redis client connected');
   try {
-    // Set memory policy to allkeys-lru (Least Recently Used)
-    await redisClient.sendCommand(['CONFIG', 'SET', 'maxmemory-policy', 'allkeys-lru']);
-    // Set maxmemory to 30MB
-    await redisClient.sendCommand(['CONFIG', 'SET', 'maxmemory', '30mb']);
-    console.log('Redis memory configuration set to 30MB');
+    // The following CONFIG commands are not supported on most managed Redis services (e.g., Redis Cloud), so they are disabled.
+    // await redisClient.sendCommand(['CONFIG', 'SET', 'maxmemory-policy', 'allkeys-lru']);
+    // await redisClient.sendCommand(['CONFIG', 'SET', 'maxmemory', '30mb']);
+    // console.log('Redis memory configuration set to 30MB');
   } catch (error) {
     console.error('Error setting Redis memory configuration:', error);
   }

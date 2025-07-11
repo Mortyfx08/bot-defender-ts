@@ -3,6 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+console.log("🚀 Starting server...");
 require("dotenv/config");
 require("@shopify/shopify-api/adapters/node");
 const express_1 = __importDefault(require("express"));
@@ -11,8 +12,9 @@ const cors_1 = __importDefault(require("cors"));
 const server_1 = require("@apollo/server");
 const express4_1 = require("@apollo/server/express4");
 const body_parser_1 = require("body-parser");
-const verifyRequest_1 = require("./middleware/verifyRequest");
 const botProtectionMiddleware_1 = __importDefault(require("./middleware/botProtectionMiddleware"));
+const botStats_1 = __importDefault(require("./routes/botStats"));
+const dashboard_1 = __importDefault(require("./routes/dashboard"));
 const redis_1 = require("./services/redis");
 const schema_1 = require("./graphql/schema");
 const resolvers_1 = require("./graphql/resolvers");
@@ -21,6 +23,7 @@ const mongodb_1 = require("./services/mongodb");
 const botDetection_1 = require("./middleware/botDetection");
 const blocklistUpdater_1 = require("./services/blocklistUpdater");
 const threatFeedService_1 = require("./services/threatFeedService");
+const api_1 = __importDefault(require("./routes/api"));
 const path_1 = __importDefault(require("path"));
 // Environment variable validation
 const requiredEnvVars = [
@@ -63,30 +66,34 @@ if (process.env.NODE_ENV === 'development') {
 // Dashboard endpoint
 app.get('/api/dashboard', async (req, res) => {
     try {
+        const shop = req.query.shop;
+        if (!shop) {
+            return res.status(400).json({ error: 'Shop parameter is required' });
+        }
         const mongoService = await mongodb_1.MongoDBService.getInstance();
-        const testShop = 'test-shop.myshopify.com';
         // Get security alerts
         const securityAlerts = await mongoService.getCollection('security_alerts')
             .find({
-            shop: testShop,
+            shop: shop,
             resolved: false
         })
             .sort({ timestamp: -1 })
             .toArray();
         // Get bot activities
         const botActivities = await mongoService.getCollection('bot_activities')
-            .find({ shop: testShop })
+            .find({ shop: shop })
             .sort({ timestamp: -1 })
             .limit(10)
             .toArray();
         // Get blocked IPs
         const blockedIPs = await mongoService.getCollection('blocked_ips')
-            .find({ shop: testShop })
+            .find({ shop: shop })
             .sort({ blockedAt: -1 })
             .toArray();
         res.json({
             status: 'success',
             data: {
+                shop: shop,
                 securityAlerts,
                 botActivities,
                 blockedIPs,
@@ -109,17 +116,19 @@ app.use((req, res, next) => {
     if (req.path.startsWith('/test/')) {
         return next();
     }
-    // For API endpoints, check for session
+    // Allow all API endpoints with a shop query param
+    if (req.path.startsWith('/api/') && req.query.shop) {
+        return next();
+    }
+    // For other API endpoints, allow them to pass through (they'll be handled by individual route middleware)
     if (req.path.startsWith('/api/')) {
-        const session = res.locals.shopify?.session;
-        if (!session) {
-            return res.status(401).json({ error: 'Unauthorized' });
-        }
+        return next();
     }
     next();
 });
 // Health check route for Railway/Shopify
 app.get('/health', (_req, res) => {
+    console.log('Health check endpoint hit');
     res.status(200).json({
         status: 'healthy',
         timestamp: new Date().toISOString(),
@@ -128,13 +137,15 @@ app.get('/health', (_req, res) => {
     });
 });
 // Root route handler
-app.get('/', (req, res) => {
-    res.json({
-        message: 'Bot Defender API is running',
-        status: 'ok',
-        timestamp: new Date().toISOString()
+if (process.env.NODE_ENV !== 'production') {
+    app.get('/', (req, res) => {
+        res.json({
+            message: 'Bot Defender API is running',
+            status: 'ok',
+            timestamp: new Date().toISOString()
+        });
     });
-});
+}
 // Test route
 app.get('/test', (req, res) => {
     res.json({
@@ -592,12 +603,14 @@ app.get('/test/cleanup-redis', async (req, res) => {
         });
     }
 });
-// Apply Shopify session middleware
-app.use('/api', verifyRequest_1.verifyRequest);
 // Apply bot detection middleware for all routes
 app.use(botDetection_1.botDetectionMiddleware);
 // API routes
 app.use('/api', botProtectionMiddleware_1.default);
+// Mount API routes
+app.use('/api', api_1.default);
+app.use('/api', dashboard_1.default);
+app.use('/api', botStats_1.default);
 // IP Blocking Middleware
 app.use(async (req, res, next) => {
     try {
@@ -677,10 +690,10 @@ async function startServer() {
             }),
         }));
         // Start Express server
-        const PORT = process.env.PORT || 4000;
-        app.listen(PORT, () => {
-            console.log(`🚀 Server ready at http://localhost:${PORT}`);
-            console.log(`📊 Health check available at http://localhost:${PORT}/health`);
+        const PORT = Number(process.env.PORT) || 4000;
+        app.listen(PORT, '0.0.0.0', () => {
+            console.log(`🚀 Server ready at http://0.0.0.0:${PORT}`);
+            console.log(`📊 Health check available at http://0.0.0.0:${PORT}/health`);
             console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
             if (missingEnvVars.length > 0) {
                 console.log(`⚠️  Missing environment variables: ${missingEnvVars.join(', ')}`);

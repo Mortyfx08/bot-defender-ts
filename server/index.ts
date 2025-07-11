@@ -21,6 +21,7 @@ import { BlocklistUpdater } from './services/blocklistUpdater';
 import { ThreatFeedService } from './services/threatFeedService';
 import apiRoutes from './routes/api';
 import path from 'path';
+import authRoutes from './routes/auth';
 
 // Environment variable validation
 const requiredEnvVars = [
@@ -71,13 +72,17 @@ if (process.env.NODE_ENV === 'development') {
 // Dashboard endpoint
 app.get('/api/dashboard', async (req: Request, res: Response) => {
   try {
+    const shop = req.query.shop as string;
+    if (!shop) {
+      return res.status(400).json({ error: 'Shop parameter is required' });
+    }
+
     const mongoService = await MongoDBService.getInstance();
-    const testShop = 'test-shop.myshopify.com';
 
     // Get security alerts
     const securityAlerts = await mongoService.getCollection('security_alerts')
       .find({ 
-        shop: testShop,
+        shop: shop,
         resolved: false
       })
       .sort({ timestamp: -1 })
@@ -85,20 +90,21 @@ app.get('/api/dashboard', async (req: Request, res: Response) => {
 
     // Get bot activities
     const botActivities = await mongoService.getCollection('bot_activities')
-      .find({ shop: testShop })
+      .find({ shop: shop })
       .sort({ timestamp: -1 })
       .limit(10)
       .toArray();
 
     // Get blocked IPs
     const blockedIPs = await mongoService.getCollection('blocked_ips')
-      .find({ shop: testShop })
+      .find({ shop: shop })
       .sort({ blockedAt: -1 })
       .toArray();
 
     res.json({
       status: 'success',
       data: {
+        shop: shop,
         securityAlerts,
         botActivities,
         blockedIPs,
@@ -121,13 +127,13 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   if (req.path.startsWith('/test/')) {
     return next();
   }
-  
-  // For API endpoints, check for session
+  // Allow all API endpoints with a shop query param
+  if (req.path.startsWith('/api/') && req.query.shop) {
+    return next();
+  }
+  // For other API endpoints, allow them to pass through (they'll be handled by individual route middleware)
   if (req.path.startsWith('/api/')) {
-    const session = res.locals.shopify?.session;
-    if (!session) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
+    return next();
   }
   next();
 });
@@ -144,13 +150,15 @@ app.get('/health', (_req, res) => {
 });
 
 // Root route handler
-app.get('/', (req: Request, res: Response) => {
-  res.json({
-    message: 'Bot Defender API is running',
-    status: 'ok',
-    timestamp: new Date().toISOString()
+if (process.env.NODE_ENV !== 'production') {
+  app.get('/', (req: Request, res: Response) => {
+    res.json({
+      message: 'Bot Defender API is running',
+      status: 'ok',
+      timestamp: new Date().toISOString()
+    });
   });
-});
+}
 
 // Test route
 app.get('/test', (req: Request, res: Response) => {
@@ -638,14 +646,17 @@ app.get('/test/cleanup-redis', async (req: Request, res: Response) => {
   }
 });
 
-// Apply Shopify session middleware
-app.use('/api', verifyRequest);
-
 // Apply bot detection middleware for all routes
 app.use(botDetectionMiddleware);
 
 // API routes
 app.use('/api', botProtectionMiddleware);
+
+// Mount API routes
+app.use('/api', apiRoutes);
+app.use('/api', dashboardRouter);
+app.use('/api', botStatsRouter);
+app.use(authRoutes);
 
 // IP Blocking Middleware
 app.use(async (req: Request, res: Response, next: Function) => {

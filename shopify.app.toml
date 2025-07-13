@@ -2,7 +2,7 @@
 
 name = "bot-defender"
 client_id = "f38307ff28448bc1858ad9f3c2d19baf"
-application_url = "https://1670883ec8c0.ngrok-free.app"
+application_url = "https://3dc7d27295f7.ngrok-free.app"
 embedded = true
 
 [build]
@@ -10,7 +10,7 @@ include_config_on_deploy = true
 
 [webhooks]
 api_version = "2025-04"
-address = "https://1670883ec8c0.ngrok-free.app/webhooks"
+address = "https://3dc7d27295f7.ngrok-free.app/webhooks"
 topics = ["app/uninstalled", "shop/update"]
 
 [access_scopes]
@@ -23,7 +23,7 @@ scopes = "read_products,write_products"
 
 
 [auth]
-redirect_urls = [ "https://1670883ec8c0.ngrok-free.app/auth/callback" ]
+redirect_urls = [ "https://3dc7d27295f7.ngrok-free.app/auth/callback" ]
 
 [pos]
 embedded = false

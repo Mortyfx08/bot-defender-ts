@@ -25,6 +25,7 @@ const blocklistUpdater_1 = require("./services/blocklistUpdater");
 const threatFeedService_1 = require("./services/threatFeedService");
 const api_1 = __importDefault(require("./routes/api"));
 const path_1 = __importDefault(require("path"));
+const auth_1 = __importDefault(require("./routes/auth"));
 // Environment variable validation
 const requiredEnvVars = [
     'HOST',
@@ -611,6 +612,7 @@ app.use('/api', botProtectionMiddleware_1.default);
 app.use('/api', api_1.default);
 app.use('/api', dashboard_1.default);
 app.use('/api', botStats_1.default);
+app.use(auth_1.default);
 // IP Blocking Middleware
 app.use(async (req, res, next) => {
     try {

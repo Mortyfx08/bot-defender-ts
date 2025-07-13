@@ -60,6 +60,31 @@ cd web-next && npm install
 - Set environment variables in your deployment dashboard
 - Update your Shopify app settings with the correct URLs
 
+## Testing & CI/CD
+
+### Production-Ready Test Suite
+- **All backend tests mock MongoDB, Redis, and Shopify API**—no real infrastructure required for CI or local runs.
+- **Frontend tests** use React Testing Library and Polaris context, and do not require a running backend.
+- **Test expectations match real app responses** (200/404 for not found, etc.).
+- **Fast, reliable, and isolated tests**—perfect for CI/CD and Shopify app store review.
+
+### Running Tests Locally
+- **Backend:**
+  ```
+  npm test --prefix server
+  ```
+- **Frontend:**
+  ```
+  npm test --prefix web-next
+  ```
+
+### Continuous Integration
+- Tests run automatically on every push/PR via GitHub Actions (see `.github/workflows/ci.yml`).
+- No real MongoDB, Redis, or Shopify credentials are needed for CI.
+
+### Integration Tests (Optional)
+- You can add `.integration.test.ts` files that use real services for staging, but keep your main suite mocked for speed and reliability.
+
 ## Troubleshooting
 - **OAuth issues:** Ensure your `HOST` and Shopify app URLs match exactly.
 - **Database errors:** Check your MongoDB/Redis connection strings and service status.

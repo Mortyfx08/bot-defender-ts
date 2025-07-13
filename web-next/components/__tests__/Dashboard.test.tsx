@@ -4,10 +4,26 @@ import { render, screen } from '@testing-library/react';
 import Dashboard from '../Dashboard';
 import { AppProvider } from '@shopify/polaris';
 
-jest.mock('../StoreConfig', () => () => <div>StoreConfig</div>);
-jest.mock('../ThreatFeedMetrics', () => () => <div>ThreatFeedMetrics</div>);
-jest.mock('../ActivityLog', () => () => <div>ActivityLog</div>);
-jest.mock('../LiveBotActivity', () => () => <div>LiveBotActivity</div>);
+jest.mock('../StoreConfig', () => {
+  const Mock = () => <div>StoreConfig</div>;
+  Mock.displayName = 'MockStoreConfig';
+  return Mock;
+});
+jest.mock('../ThreatFeedMetrics', () => {
+  const Mock = () => <div>ThreatFeedMetrics</div>;
+  Mock.displayName = 'MockThreatFeedMetrics';
+  return Mock;
+});
+jest.mock('../ActivityLog', () => {
+  const Mock = () => <div>ActivityLog</div>;
+  Mock.displayName = 'MockActivityLog';
+  return Mock;
+});
+jest.mock('../LiveBotActivity', () => {
+  const Mock = () => <div>LiveBotActivity</div>;
+  Mock.displayName = 'MockLiveBotActivity';
+  return Mock;
+});
 
 const i18n = { en: {}};
 

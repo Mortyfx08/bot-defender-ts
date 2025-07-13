@@ -20,6 +20,23 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Testing & CI/CD
+
+### Frontend Test Suite
+- **All frontend tests use React Testing Library and Polaris context.**
+- **No backend or API server is required to run frontend tests.**
+- **Tests cover loading, error, and success states for all major components.**
+- **Fast, reliable, and isolated—perfect for CI/CD and Shopify app store review.**
+
+### Running Tests Locally
+```bash
+npm test
+```
+
+### Continuous Integration
+- Frontend tests run automatically on every push/PR via GitHub Actions (see `.github/workflows/ci.yml`).
+- No backend or external services are required for frontend tests in CI.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:

@@ -2,17 +2,13 @@ import React, { useState } from 'react';
 import {
   TopBar,
   Text,
-  Button,
   Modal,
   FormLayout,
   TextField,
   Select,
-  Banner,
   ActionList,
-  ColorPicker,
   RangeSlider,
   Tabs,
-  Card,
   SettingToggle,
   Toast,
 } from '@shopify/polaris';
@@ -69,17 +65,18 @@ const StoreConfig: React.FC<StoreConfigProps> = ({ shop, onConfigUpdate }) => {
   const [toastMsg, setToastMsg] = useState('');
   const [errors, setErrors] = useState<{ customDomain?: string; blockThreshold?: string }>({});
 
-  const handleConfigChange = (key: keyof StoreConfigType, value: any) => {
-    let newErrors = { ...errors };
+  // Update handleConfigChange to accept correct types for each key
+  function handleConfigChange<K extends keyof StoreConfigType>(key: K, value: StoreConfigType[K]) {
+    const newErrors = { ...errors };
     if (key === 'customDomain') {
-      if (value && !/^([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}$/.test(value)) {
+      if (value && !/^([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}$/.test(value as string)) {
         newErrors.customDomain = 'Invalid domain format.';
       } else {
         delete newErrors.customDomain;
       }
     }
     if (key === 'blockThreshold') {
-      if (value < 1 || value > 100) {
+      if ((value as number) < 1 || (value as number) > 100) {
         newErrors.blockThreshold = 'Threshold must be between 1 and 100.';
       } else {
         delete newErrors.blockThreshold;
@@ -91,12 +88,13 @@ const StoreConfig: React.FC<StoreConfigProps> = ({ shop, onConfigUpdate }) => {
     onConfigUpdate(newConfig);
     setToastMsg('Configuration updated');
     setToastActive(true);
-  };
+  }
 
-  const handleMetricsChange = (metric: keyof StoreConfigType['showMetrics'], value: boolean) => {
+  // Update handleMetricsChange to use correct type
+  function handleMetricsChange(metric: keyof StoreConfigType['showMetrics'], value: boolean) {
     const newMetrics = { ...config.showMetrics, [metric]: value };
     handleConfigChange('showMetrics', newMetrics);
-  };
+  }
 
   const userMenuMarkup = (
     <ActionList
@@ -200,7 +198,7 @@ const StoreConfig: React.FC<StoreConfigProps> = ({ shop, onConfigUpdate }) => {
                       { label: 'Dark', value: 'dark' },
                     ]}
                     value={config.theme}
-                    onChange={(value) => handleConfigChange('theme', value)}
+                    onChange={(value) => handleConfigChange('theme', value as StoreConfigType['theme'])}
                   />
                   <TextField
                     label="Custom Domain"
@@ -294,7 +292,7 @@ const StoreConfig: React.FC<StoreConfigProps> = ({ shop, onConfigUpdate }) => {
                     min={10}
                     max={300}
                     value={config.refreshInterval}
-                    onChange={(value) => handleConfigChange('refreshInterval', value)}
+                    onChange={(value) => handleConfigChange('refreshInterval', value as number)}
                   />
                 </FormLayout>
               )}

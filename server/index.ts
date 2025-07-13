@@ -707,6 +707,8 @@ if (process.env.NODE_ENV === 'production') {
   });
 }
 
+export { app };
+
 // Start Apollo Server and Express app
 async function startServer() {
   try {
@@ -765,7 +767,9 @@ async function startServer() {
   }
 }
 
-startServer();
+if (require.main === module) {
+  startServer();
+}
 
 // Handle uncaught errors
 process.on('uncaughtException', (error) => {

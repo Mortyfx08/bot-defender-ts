@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { Card, Text, DataTable, Badge, SkeletonBodyText, EmptyState } from '@shopify/polaris';
-import type { BadgeProps } from '@shopify/polaris';
 
 interface BotActivity {
   id: string;

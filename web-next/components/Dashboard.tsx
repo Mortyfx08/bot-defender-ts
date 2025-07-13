@@ -1,12 +1,23 @@
+'use client';
+
 import React, { useEffect, useState } from 'react';
-import { Page, Layout, Card, Text, TextContainer, Banner, SkeletonPage, SkeletonBodyText, EmptyState, InlineStack, BlockStack, Badge, Toast } from '@shopify/polaris';
-import ThreatFeedMetrics from './ThreatFeedMetrics';
+import { Page, Layout, Card, Text, Banner, SkeletonPage, SkeletonBodyText, EmptyState, InlineStack, BlockStack, Badge, Toast } from '@shopify/polaris';
+import { Button, Tooltip, ProgressBar, Divider } from '@shopify/polaris';
+import { RefreshIcon } from '@shopify/polaris-icons';
 import ActivityLog from './ActivityLog';
 import LiveBotActivity from './LiveBotActivity';
-import StoreConfig, { StoreConfigType } from './StoreConfig';
+import { StoreConfigType } from './StoreConfig';
 import { useAppBridge } from '../providers/AppBridgeProvider';
-import actions from '@shopify/app-bridge/actions';
+import { TitleBar, ContextualSaveBar } from '@shopify/app-bridge/actions';
 import type { ApiError, ApiSuccess, DashboardData } from '../types/api';
+
+function ClientDate({ date, timeZone }: { date: string | null, timeZone?: string }) {
+  const [formatted, setFormatted] = React.useState('Never');
+  React.useEffect(() => {
+    if (date) setFormatted(new Date(date).toLocaleString(undefined, timeZone ? { timeZone } : undefined));
+  }, [date, timeZone]);
+  return <>{formatted}</>;
+}
 
 const Dashboard: React.FC = () => {
   const [data, setData] = useState<DashboardData | null>(null);
@@ -27,29 +38,25 @@ const Dashboard: React.FC = () => {
       botActivities: true,
       threatFeed: true,
     },
-    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    timezone: 'UTC', // set default to UTC for SSR
     dateFormat: 'MM/DD/YYYY',
   });
   const [toastActive, setToastActive] = useState(false);
-  const [toastMsg, setToastMsg] = useState('');
   const appBridge = useAppBridge();
 
   // Add App Bridge resize support
   React.useEffect(() => {
     if (appBridge) {
-      const resize = actions.TitleBar.create(appBridge, { title: 'Bot Defender Dashboard' });
-      actions.ContextualSaveBar.create(appBridge, {}); // Ensures correct resizing
+      TitleBar.create(appBridge, { title: 'Bot Defender Dashboard' });
+      ContextualSaveBar.create(appBridge, {}); // Ensures correct resizing
     }
   }, [appBridge]);
 
-  // Back to Shopify handler
-  const handleBackToShopify = () => {
-    if (appBridge) {
-      actions.Redirect.create(appBridge).dispatch(actions.Redirect.Action.ADMIN_PATH, '/admin');
-    } else {
-      window.top?.location.replace('/admin');
-    }
-  };
+  // Set timezone to client value after mount
+  React.useEffect(() => {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    setStoreConfig(prev => ({ ...prev, timezone: tz }));
+  }, []);
 
   // Helper function to get shop from URL
   const getShopFromURL = () => {
@@ -80,6 +87,9 @@ const Dashboard: React.FC = () => {
     }
     return shop;
   };
+
+  // Add a refetch trigger
+  const [refreshIndex, setRefreshIndex] = useState(0);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -116,30 +126,14 @@ const Dashboard: React.FC = () => {
     fetchDashboardData();
     const interval = setInterval(fetchDashboardData, storeConfig.refreshInterval * 1000);
     return () => clearInterval(interval);
-  }, [storeConfig.refreshInterval]);
+  }, [storeConfig.refreshInterval, refreshIndex]);
 
-  const handleConfigUpdate = async (newConfig: StoreConfigType) => {
-    try {
-      const shop = getShopFromURL();
-      if (!shop) {
-        throw new Error('No shop parameter found');
-      }
-      const response = await fetch(`/api/store-config?shop=${shop}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ config: newConfig }),
-      });
-      if (!response.ok) {
-        throw new Error('Failed to update store configuration');
-      }
-      setStoreConfig(newConfig);
-      setToastMsg('Store configuration saved!');
-      setToastActive(true);
-    } catch (error) {
-      setToastMsg('Error updating store configuration.');
-      setToastActive(true);
-      console.error('Error updating store configuration:', error);
-    }
+
+
+  // Add a manual refresh button that triggers a refetch
+  const handleManualRefresh = () => {
+    setLoading(true);
+    setRefreshIndex(i => i + 1);
   };
 
   if (loading) {
@@ -164,8 +158,8 @@ const Dashboard: React.FC = () => {
   const errorBanner = error && showErrorBanner ? (
     <Banner title="Error" tone="critical" onDismiss={() => setShowErrorBanner(false)}>
       <p>{error}</p>
-      <p>Please ensure you're accessing this page through your Shopify admin panel.</p>
-      <p>If you're testing locally, you can use: http://localhost:3000/dashboard?shop=your-store.myshopify.com</p>
+      <p>Please ensure you&apos;re accessing this page through your Shopify admin panel.</p>
+      <p>If you&apos;re testing locally, you can use: http://localhost:3000/dashboard?shop=your-store.myshopify.com</p>
     </Banner>
   ) : null;
 
@@ -190,85 +184,141 @@ const Dashboard: React.FC = () => {
 
   const formatDate = (date: string | null) => {
     if (!date) return 'Never';
-    return new Date(date).toLocaleString(undefined, {
-      timeZone: storeConfig.timezone,
-    });
+    return <ClientDate date={date} timeZone={storeConfig.timezone} />;
   };
+
+  // For ProgressBar, use a max value (e.g., 100 or a realistic max)
+  const maxValue = 100;
 
   return (
     <>
-      <StoreConfig shop={data.shop} onConfigUpdate={handleConfigUpdate} />
-      <Page title={`Bot Defender - ${data.shop?.name || 'Unknown Store'}`} subtitle={storeConfig.customGreeting}>
-        {errorBanner}
-        <div style={{ marginBottom: 16 }}>
-          <button onClick={handleBackToShopify} style={{ background: 'none', border: 'none', color: '#008060', cursor: 'pointer', fontWeight: 600, fontSize: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-            ← Back to Shopify
-          </button>
-        </div>
+      <Page>
         <Layout>
           <Layout.Section>
-            <div className={`dashboard-grid ${storeConfig.dashboardLayout}`} style={{ '--primary-color': storeConfig.primaryColor } as React.CSSProperties}>
-              {/* Store Info */}
-              <Card>
-                <TextContainer>
-                  <Text variant="headingMd" as="h2">Store Information</Text>
-                  <Text as="p">Domain: {data.shop?.domain || 'Unknown'}</Text>
-                  <Text as="p">Name: {data.shop?.name || 'Unknown'}</Text>
-                </TextContainer>
-              </Card>
-              {/* Threat Feed Metrics Section */}
-              {storeConfig && storeConfig.showMetrics?.threatFeed && (
-                <Card>
-                  <TextContainer>
-                    <ThreatFeedMetrics metrics={data.metrics} />
-                  </TextContainer>
-                </Card>
-              )}
-              {/* Security Metrics Section - improved with Stack and Badge */}
-              <Card>
-                <TextContainer>
-                  <Text variant="headingMd" as="h2">Security Metrics</Text>
-                  <InlineStack gap="400" align="space-evenly">
-                    {storeConfig.showMetrics.totalAlerts && (
-                      <div className="metric-card">
-                        <Text variant="headingLg" as="h3">{data.metrics?.totalAlerts ?? 0}</Text>
-                        <Badge tone="critical">Total Alerts</Badge>
-                      </div>
-                    )}
-                    {storeConfig.showMetrics.blockedIPs && (
-                      <div className="metric-card">
-                        <Text variant="headingLg" as="h3">{data.metrics?.totalBlockedIPs ?? 0}</Text>
-                        <Badge tone="info">Blocked IPs</Badge>
-                      </div>
-                    )}
-                    {storeConfig.showMetrics.botActivities && (
-                      <div className="metric-card">
-                        <Text variant="headingLg" as="h3">{data.metrics?.recentBotActivities ?? 0}</Text>
-                        <Badge tone="warning">Recent Bot Activities</Badge>
-                      </div>
-                    )}
-                  </InlineStack>
-                  <Text as="p" variant="bodySm" tone="subdued" alignment="end">
+            <Card>
+              <BlockStack gap="400">
+                <Text variant="heading2xl" as="h1" tone="success">
+                  👋 Welcome, {data.shop?.name || 'Shopify User'}!
+                </Text>
+                <Text as="p" tone="subdued">
+                  Here&apos;s your real-time bot defense dashboard for <b>{data.shop?.domain || 'Unknown'}</b>.
+                </Text>
+                <InlineStack align="center" gap="200">
+                  <Tooltip content="Refresh dashboard data">
+                    <Button icon={RefreshIcon} onClick={handleManualRefresh} variant="tertiary" accessibilityLabel="Refresh" />
+                  </Tooltip>
+                  <Text as="span" tone="subdued">
                     Last updated: {formatDate(data.metrics?.threatFeedMetrics?.lastUpdate)}
                   </Text>
-                </TextContainer>
-              </Card>
-              {/* Live Bot Activity Section */}
-              {storeConfig.showMetrics.botActivities && (
-                <Card>
-                  <LiveBotActivity shop={data.shop?.domain || 'Unknown'} />
-                </Card>
-              )}
-              {/* Activity Log Section */}
-              <Card>
+                </InlineStack>
+              </BlockStack>
+            </Card>
+          </Layout.Section>
+
+          <Layout.Section>
+            <Card>
+              <BlockStack gap="400">
+                <Text variant="headingLg" as="h2">Threat Feed Metrics</Text>
+                <Divider/>
+                <InlineStack gap="800" align="start">
+                  <BlockStack gap="200">
+                    <Tooltip content="Total IPs in threat feed">
+                      <Text variant="headingMd" as="h3">{data.metrics?.threatFeedMetrics.totalThreatFeedIPs ?? 0}</Text>
+                    </Tooltip>
+                    <Text as="p" tone="subdued">Total Threat Feed IPs</Text>
+                    <ProgressBar progress={Math.min((data.metrics?.threatFeedMetrics.totalThreatFeedIPs ?? 0) / maxValue * 100, 100)} size="small" />
+                  </BlockStack>
+                  <BlockStack gap="200">
+                    <Tooltip content="Number of blocks from threat feed">
+                      <Text variant="headingMd" as="h3">{data.metrics?.threatFeedMetrics.threatFeedBlocks ?? 0}</Text>
+                    </Tooltip>
+                    <Text as="p" tone="subdued">Threat Feed Blocks</Text>
+                    <ProgressBar progress={Math.min((data.metrics?.threatFeedMetrics.threatFeedBlocks ?? 0) / maxValue * 100, 100)} size="small" tone="critical" />
+                  </BlockStack>
+                  <BlockStack gap="200">
+                    <Tooltip content="Last time threat feed was updated">
+                      <Text variant="headingMd" as="h3"><ClientDate date={data.metrics?.threatFeedMetrics.lastUpdate} timeZone={storeConfig.timezone} /></Text>
+                    </Tooltip>
+                    <Text as="p" tone="subdued">Last Update</Text>
+                  </BlockStack>
+                </InlineStack>
+                <Divider/>
+                <InlineStack gap="800" align="start">
+                  <BlockStack gap="200">
+                    <Tooltip content="High severity threats">
+                      <Badge tone="critical">{`High: ${data.metrics?.threatFeedMetrics.threatFeedHighSeverity ?? 0}`}</Badge>
+                    </Tooltip>
+                  </BlockStack>
+                  <BlockStack gap="200">
+                    <Tooltip content="Medium severity threats">
+                      <Badge tone="warning">{`Medium: ${data.metrics?.threatFeedMetrics.threatFeedMediumSeverity ?? 0}`}</Badge>
+                    </Tooltip>
+                  </BlockStack>
+                  <BlockStack gap="200">
+                    <Tooltip content="Low severity threats">
+                      <Badge tone="info">{`Low: ${data.metrics?.threatFeedMetrics.threatFeedLowSeverity ?? 0}`}</Badge>
+                    </Tooltip>
+                  </BlockStack>
+                </InlineStack>
+              </BlockStack>
+            </Card>
+          </Layout.Section>
+
+          <Layout.Section>
+            <Card>
+              <BlockStack gap="400">
+                <Text variant="headingLg" as="h2">Security Metrics</Text>
+                <Divider/>
+                <InlineStack gap="800" align="start">
+                  <BlockStack gap="200">
+                    <Tooltip content="Total alerts triggered">
+                      <Text variant="headingMd" as="h3">{data.metrics?.totalAlerts ?? 0}</Text>
+                    </Tooltip>
+                    <Text as="p" tone="subdued">Total Alerts</Text>
+                    <ProgressBar progress={Math.min((data.metrics?.totalAlerts ?? 0) / maxValue * 100, 100)} size="small" tone="critical" />
+                  </BlockStack>
+                  <BlockStack gap="200">
+                    <Tooltip content="Total blocked IPs">
+                      <Text variant="headingMd" as="h3">{data.metrics?.totalBlockedIPs ?? 0}</Text>
+                    </Tooltip>
+                    <Text as="p" tone="subdued">Blocked IPs</Text>
+                    <ProgressBar progress={Math.min((data.metrics?.totalBlockedIPs ?? 0) / maxValue * 100, 100)} size="small" />
+                  </BlockStack>
+                  <BlockStack gap="200">
+                    <Tooltip content="Recent bot activities">
+                      <Text variant="headingMd" as="h3">{data.metrics?.recentBotActivities ?? 0}</Text>
+                    </Tooltip>
+                    <Text as="p" tone="subdued">Recent Bot Activities</Text>
+                    <ProgressBar progress={Math.min((data.metrics?.recentBotActivities ?? 0) / maxValue * 100, 100)} size="small" />
+                  </BlockStack>
+                </InlineStack>
+              </BlockStack>
+            </Card>
+          </Layout.Section>
+
+          <Layout.Section>
+            <Card>
+              <BlockStack gap="400">
+                <Text variant="headingLg" as="h2">Live Bot Activity</Text>
+                <Divider/>
+                <LiveBotActivity shop={data.shop?.domain || 'Unknown'} />
+              </BlockStack>
+            </Card>
+          </Layout.Section>
+
+          <Layout.Section>
+            <Card>
+              <BlockStack gap="400">
+                <Text variant="headingLg" as="h2">Activity Log</Text>
+                <Divider/>
                 <ActivityLog shop={data.shop?.domain || 'Unknown'} />
-              </Card>
-            </div>
+              </BlockStack>
+            </Card>
           </Layout.Section>
         </Layout>
       </Page>
       {toastActive && (
-        <Toast content={toastMsg} onDismiss={() => setToastActive(false)} />
+        <Toast content="" onDismiss={() => setToastActive(false)} />
       )}
     </>
   );

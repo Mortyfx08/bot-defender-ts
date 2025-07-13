@@ -14,7 +14,7 @@ describe('LiveBotActivity', () => {
     }
   });
 
-  function setupFetch(data: any, delay = 0) {
+  function setupFetch(data: unknown, delay = 0) {
     jest.spyOn(global, 'fetch').mockImplementation(() =>
       new Promise((resolve) =>
         setTimeout(

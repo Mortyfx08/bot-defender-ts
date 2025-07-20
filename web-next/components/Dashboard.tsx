@@ -13,9 +13,23 @@ import type { ApiError, ApiSuccess, DashboardData } from '../types/api';
 
 function ClientDate({ date, timeZone }: { date: string | null, timeZone?: string }) {
   const [formatted, setFormatted] = React.useState('Never');
+  const [mounted, setMounted] = React.useState(false);
+  
   React.useEffect(() => {
-    if (date) setFormatted(new Date(date).toLocaleString(undefined, timeZone ? { timeZone } : undefined));
-  }, [date, timeZone]);
+    setMounted(true);
+  }, []);
+  
+  React.useEffect(() => {
+    if (date && mounted) {
+      setFormatted(new Date(date).toLocaleString(undefined, timeZone ? { timeZone } : undefined));
+    }
+  }, [date, timeZone, mounted]);
+  
+  // Return consistent value during SSR and initial client render
+  if (!mounted) {
+    return <>{date ? 'Loading...' : 'Never'}</>;
+  }
+  
   return <>{formatted}</>;
 }
 
@@ -54,8 +68,10 @@ const Dashboard: React.FC = () => {
 
   // Set timezone to client value after mount
   React.useEffect(() => {
-    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    setStoreConfig(prev => ({ ...prev, timezone: tz }));
+    if (typeof window !== 'undefined') {
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      setStoreConfig(prev => ({ ...prev, timezone: tz }));
+    }
   }, []);
 
   // Helper function to get shop from URL

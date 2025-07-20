@@ -749,7 +749,7 @@ async function startServer() {
     );
 
     // Start Express server
-    const PORT = Number(process.env.PORT) || 4000;
+    const PORT = Number(process.env.PORT) || 3000;
     app.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 Server ready at http://0.0.0.0:${PORT}`);
       console.log(`📊 Health check available at http://0.0.0.0:${PORT}/health`);

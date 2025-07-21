@@ -10,7 +10,7 @@ builder = "dockerfile"
 dockerfile = "Dockerfile"
 
 [deploy]
-startCommand = '$env:NEXT_PRIVATE_DEV_SERVER_TYPE="webpack"; npm run dev --prefix web-next'
+startCommand = 'NEXT_PRIVATE_DEV_SERVER_TYPE=webpack npm run dev --prefix web-next'
 healthcheckPath = "/health"
 healthcheckTimeout = 300
 restartPolicyType = "ON_FAILURE"

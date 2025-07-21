@@ -21,17 +21,18 @@ COPY . .
 # Build the backend (TypeScript -> dist/)
 RUN npm run build
 
-# Build the frontend
-WORKDIR /app/web
-COPY web/package*.json ./
+# Build the frontend (Next.js)
+WORKDIR /app/web-next
+COPY web-next/package*.json ./
 RUN npm install --legacy-peer-deps
-COPY web/ ./
+COPY web-next/ ./
 RUN npm run build
 
-# Move back to root and copy frontend build to backend
+# Move back to root and copy frontend build to backend if needed
 WORKDIR /app
-RUN mkdir -p dist/web/build
-RUN cp -r web/build/* dist/web/build/
+# Example: copy .next/static to dist/web-next/static if your backend serves static files
+# RUN mkdir -p dist/web-next/static
+# RUN cp -r web-next/.next/static dist/web-next/static/
 
 # Expose port
 EXPOSE 3000

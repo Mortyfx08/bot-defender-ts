@@ -139,14 +139,8 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 });
 
 // Health check route for Railway/Shopify
-app.get('/health', (_req, res) => {
-  console.log('Health check endpoint hit');
-  res.status(200).json({
-    status: 'healthy',
-    timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development',
-    port: process.env.PORT || 'not set'
-  });
+app.get('/health', (req, res) => {
+  res.status(200).send('OK');
 });
 
 // Root route handler

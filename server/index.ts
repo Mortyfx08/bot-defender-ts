@@ -139,8 +139,36 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 });
 
 // Health check route for Railway/Shopify
-app.get('/health', (req, res) => {
-  res.status(200).send('OK');
+app.get('/health', async (req, res) => {
+  try {
+    // Check critical connections
+    const mongoService = await MongoDBService.getInstance();
+    const redisService = await RedisService.getInstance();
+    
+    // Check if services are connected
+    const isMongoConnected = await mongoService.isConnected();
+    const isRedisConnected = await redisService.isConnected();
+    
+    if (isMongoConnected && isRedisConnected) {
+      res.status(200).json({
+        status: 'ok',
+        mongoDB: 'connected',
+        redis: 'connected'
+      });
+    } else {
+      res.status(503).json({
+        status: 'error',
+        mongoDB: isMongoConnected ? 'connected' : 'disconnected',
+        redis: isRedisConnected ? 'connected' : 'disconnected'
+      });
+    }
+  } catch (error) {
+    console.error('Health check error:', error);
+    res.status(500).json({
+      status: 'error',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
 });
 
 // Root route handler

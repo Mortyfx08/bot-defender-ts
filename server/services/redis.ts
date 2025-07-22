@@ -67,7 +67,7 @@ interface BlockOptions {
 export class RedisService {
   private static instance: RedisService;
   private client: RedisClientType<RedisModules, RedisFunctions, RedisScripts>;
-  private isConnected: boolean = false;
+  private _isConnected: boolean = false;
   private threatFeedService!: ThreatFeedService;
 
   private constructor() {
@@ -79,12 +79,12 @@ export class RedisService {
     this.client.on('error', (err) => console.error('Redis Client Error:', err));
     this.client.on('connect', () => {
       console.log('Redis client connected');
-      this.isConnected = true;
+      this._isConnected = true;
     });
     this.client.on('ready', () => console.log('Redis client ready'));
     this.client.on('end', () => {
       console.log('Redis client disconnected');
-      this.isConnected = false;
+      this._isConnected = false;
     });
   }
 
@@ -105,6 +105,10 @@ export class RedisService {
       console.error('Redis connection error:', error);
       throw error;
     }
+  }
+
+  public isConnected(): boolean {
+    return this._isConnected;
   }
 
   public async get(key: string): Promise<string | null> {

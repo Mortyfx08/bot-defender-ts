@@ -46,6 +46,10 @@ export class MongoDBService {
     }
   }
 
+  public async isConnected(): Promise<boolean> {
+    return !!this.client && !!this.client.topology && this.client.topology.isConnected();
+  }
+
   public getCollection<T extends Document>(collectionName: string): Collection<T> {
     return this.db.collection<T>(collectionName);
   }
